@@ -1,4 +1,4 @@
-# Project Title: Music Streaming Web - SoundCloud Clone
+# Project Title: Music Streaming Web - SoundCloud
 
 ## Author: Diệu Xuân - Student
 
