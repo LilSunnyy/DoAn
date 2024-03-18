@@ -6,7 +6,7 @@ class UserSerializer(ModelSerializer):
     avatar = serializers.SerializerMethodField(source='avatar')
     class Meta:
         model = User
-        fields = ['__all__']
+        fields = '__all__'
         extra_kwargs = {
             'password' : {'write_only':'true'}
         }
@@ -43,7 +43,7 @@ class UserSerializer(ModelSerializer):
 class TracksSerializer(ModelSerializer):
     class Meta:
         model = Tracks
-        fields = ['__all__']
+        fields = '__all__'
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -51,5 +51,14 @@ class TracksSerializer(ModelSerializer):
         # Xóa domain từ URL hình ảnh
         if 'photo' in representation and representation['photo']:
             representation['photo'] = representation['photo'].replace(self.context['request'].build_absolute_uri('/'),'')
+        if 'url' in representation and representation['url']:
+            representation['url'] = representation['url'].replace(self.context['request'].build_absolute_uri('/'),
+                                                                      '')
 
         return representation
+
+
+class GenreSerializer(ModelSerializer):
+    class Meta:
+        model = Genre
+        fields = '__all__'

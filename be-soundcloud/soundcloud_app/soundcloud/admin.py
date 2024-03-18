@@ -9,7 +9,17 @@ from .models import *
 from django.contrib.auth.models import Permission, Group
 
 class TracksAdmin(admin.ModelAdmin):
-    list_display = ["id"]
+    list_display = ["id", "title"]
+    search_fields = ["id"]
+    list_filter = ["id"]
+
+class UserAdmin(admin.ModelAdmin):
+    list_display = ["id", "username"]
+    search_fields = ["id"]
+    list_filter = ["id"]
+
+class GenreAdmin(admin.ModelAdmin):
+    list_display = ["id","name"]
     search_fields = ["id"]
     list_filter = ["id"]
 
@@ -21,5 +31,7 @@ class SoundCloudAdminSite(admin.AdminSite):
 admin_site = SoundCloudAdminSite('soundcloud')
 
 admin_site.register(Tracks,TracksAdmin)
+admin_site.register(User,UserAdmin)
+admin_site.register(Genre,GenreAdmin)
 admin_site.register(Permission)
 admin_site.register(Group)

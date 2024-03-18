@@ -9,12 +9,48 @@ from rest_framework.decorators import action
 from .serializers import *
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
+import json
+from oauth2_provider.models import get_access_token_model, get_application_model
+from oauth2_provider.signals import app_authorized
+from oauth2_provider.views.base import TokenView
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
-import json
+# from dj_rest_auth.registration.views import SocialLoginView
+from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 
 class UserPagination(PageNumberPagination):
     page_size = 5
+
+# class CustomTokenView(TokenView):
+#     @method_decorator(sensitive_post_parameters("password"))
+#     def post(self, request, *args, **kwargs):
+#         url, headers, body, status = self.create_token_response(request)
+#         if status == 200:
+#             body = json.loads(body)
+#             access_token = body.get("access_token")
+#             if access_token is not None:
+#                 token = get_access_token_model().objects.get(
+#                     token=access_token)
+#                 app_authorized.send(
+#                     sender=self, request=request,
+#                     token=token)
+#                 body['user'] = {
+#                     'id': token.user.id,
+#                     'username': token.user.username,
+#                     'email': token.user.email,
+#                     'avatar': token.user.avatar.name
+#                 }
+#                 body = json.dumps(body)
+#         response = HttpResponse(content=body, status=status)
+#         for k, v in headers.items():
+#             response[k] = v
+#         return response
+#
+# class GithubLogin(SocialLoginView):
+#     adapter_class = GitHubOAuth2Adapter
+#     callback_url = "http://127.0.0.1:3000/"
+#     client_class = OAuth2Client
 
 class UserViewSet(viewsets.ViewSet,
                   generics.ListAPIView):
@@ -95,7 +131,8 @@ class UserViewSet(viewsets.ViewSet,
 
 class TracksViewSet(viewsets.ViewSet,
                   generics.RetrieveAPIView,
-                    generics.ListAPIView):
+                    generics.ListAPIView,
+                    generics.CreateAPIView):
     queryset = Tracks.objects.filter(is_active = True)
     serializer_class = TracksSerializer
 
@@ -120,8 +157,8 @@ class TracksViewSet(viewsets.ViewSet,
             return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
 
     @action(methods=['post'], detail=True,
-            url_path="hide-course",
-            url_name="hide-course")
+            url_path="hide-tracks",
+            url_name="hide-tracks")
     def hide_course(self, request, pk):
         try:
             t = Tracks.objects.get(pk=pk)
@@ -131,3 +168,42 @@ class TracksViewSet(viewsets.ViewSet,
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         return Response(data=Tracks(t, context={'request': request}).data, status=status.HTTP_200_OK)
+
+class GenreViewSet(viewsets.ViewSet,
+                  generics.RetrieveAPIView,
+                    generics.ListAPIView):
+    queryset = Genre.objects.filter(is_active = True)
+    serializer_class = GenreSerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            response_data = {
+                'error': None,
+                'message': 'Success',
+                'statusCode': status.HTTP_200_OK,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+        except Genre.DoesNotExist:
+            response_data = {
+                'error': 'Không tìm thấy thể loại.',
+                'message': 'Không tìm thấy thể loại.',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+
+    @action(methods=['post'], detail=True,
+            url_path="hide-genre",
+            url_name="hide-genre")
+    def hide_course(self, request, pk):
+        try:
+            g = Genre.objects.get(pk=pk)
+            g.is_active = False
+            g.save()
+        except Genre.DoesNotExits:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(data=Tracks(g, context={'request': request}).data, status=status.HTTP_200_OK)
