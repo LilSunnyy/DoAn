@@ -9,6 +9,11 @@ router = DefaultRouter()
 router.register('tracks', views.TracksViewSet)
 router.register('users', views.UserViewSet)
 router.register('genre', views.GenreViewSet)
+router.register('playlist', views.PlaylistViewSet)
+router.register('playlisttracks', views.PlaylistTracksViewSet)
+router.register('comment', views.CommentViewSet)
+router.register('like', views.LikeViewSet)
+router.register('follower', views.FollowerViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

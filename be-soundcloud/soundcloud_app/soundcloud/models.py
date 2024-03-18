@@ -15,8 +15,6 @@ class ItemBase(models.Model):
     updated_date = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
 
-    def __str__(self):
-        return self.name
 
 class Tracks(ItemBase):
     class Meta:
@@ -48,7 +46,7 @@ class Playlist(ItemBase):
     def __str__(self):
         return self.title
 
-class PlaylistTracks(models.Model):
+class PlaylistTracks(ItemBase):
     class Meta:
         db_table = 'playlisttracks'
 
@@ -70,7 +68,7 @@ class Comment(ItemBase):
 class Like(ItemBase):
     class Meta:
         db_table = 'like'
-
+    like = models.BooleanField(null=False, default=False)
     fk_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
                                 related_name="like_user")
     fk_tracks = models.ForeignKey(Tracks, on_delete=models.SET_NULL, null=True,

@@ -23,6 +23,31 @@ class GenreAdmin(admin.ModelAdmin):
     search_fields = ["id"]
     list_filter = ["id"]
 
+class PlaylistAdmin(admin.ModelAdmin):
+    list_display = ["id", "title", "fk_user"]
+    search_fields = ["id"]
+    list_filter = ["id"]
+
+class PlaylistTracksAdmin(admin.ModelAdmin):
+    list_display = ["id", "fk_playlist", "fk_tracks"]
+    search_fields = ["id"]
+    list_filter = ["id"]
+
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ["id", "fk_user", "fk_tracks"]
+    search_fields = ["id"]
+    list_filter = ["id"]
+
+class LikeAdmin(admin.ModelAdmin):
+    list_display = ["id", "fk_user", "fk_tracks", "like"]
+    search_fields = ["id"]
+    list_filter = ["id"]
+
+class FollowerAdmin(admin.ModelAdmin):
+    list_display = ["id", "fk_user", "fk_follower"]
+    search_fields = ["id"]
+    list_filter = ["id"]
+
 class SoundCloudAdminSite(admin.AdminSite):
     site_header = 'SoundCloud'
     index_title = 'Trang web nghe nhạc'
@@ -33,5 +58,11 @@ admin_site = SoundCloudAdminSite('soundcloud')
 admin_site.register(Tracks,TracksAdmin)
 admin_site.register(User,UserAdmin)
 admin_site.register(Genre,GenreAdmin)
+admin_site.register(Playlist,PlaylistAdmin)
+admin_site.register(PlaylistTracks,PlaylistTracksAdmin)
+admin_site.register(Comment,CommentAdmin)
+admin_site.register(Like,LikeAdmin)
+admin_site.register(Follower,FollowerAdmin)
+
 admin_site.register(Permission)
 admin_site.register(Group)

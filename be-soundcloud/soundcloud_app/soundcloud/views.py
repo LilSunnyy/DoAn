@@ -18,8 +18,9 @@ from django.views.decorators.debug import sensitive_post_parameters
 from dj_rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from rest_framework.decorators import api_view
 
-class UserPagination(PageNumberPagination):
+class Pagination(PageNumberPagination):
     page_size = 5
 
 class CustomTokenView(TokenView):
@@ -57,12 +58,12 @@ class UserViewSet(viewsets.ViewSet,
     queryset = User.objects.filter(is_active=True)
     serializer_class = UserSerializer
     parser_classes = [MultiPartParser, FormParser]
-    pagination_class = UserPagination
+    pagination_class = Pagination
 
     def get_permissions(self):
         if self.action == 'list' or self.action == 'hide_user':
             return [permissions.IsAdminUser()]
-        return [permissions.IsAuthenticated()]
+        # return [permissions.IsAuthenticated()]
 
     @action(methods=['get'], detail=False, url_path='current-user')
     def current_user(self, request):
@@ -93,10 +94,20 @@ class UserViewSet(viewsets.ViewSet,
         if request.method == 'POST':
             if form.is_valid():
                 form.save()
-                return Response(status=status.HTTP_201_CREATED)
+                response_data = {
+                    'error': None,
+                    'message': 'Tạo người dùng thành công',
+                    'statusCode': status.HTTP_200_OK,
+                }
+                return Response(data=response_data, status=status.HTTP_200_OK)
             else:
                 errors = dict(form.errors)
-                return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+                response_data = {
+                    'error': errors,
+                    'message': 'Lỗi khi tạo người dùng',
+                    'statusCode': status.HTTP_400_BAD_REQUEST,
+                }
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({'error': 'Invalid request method'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -135,6 +146,7 @@ class TracksViewSet(viewsets.ViewSet,
                     generics.CreateAPIView):
     queryset = Tracks.objects.filter(is_active = True)
     serializer_class = TracksSerializer
+    pagination_class = Pagination
 
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -159,7 +171,7 @@ class TracksViewSet(viewsets.ViewSet,
     @action(methods=['post'], detail=True,
             url_path="hide-tracks",
             url_name="hide-tracks")
-    def hide_course(self, request, pk):
+    def hide_tracks(self, request, pk):
         try:
             t = Tracks.objects.get(pk=pk)
             t.is_active = False
@@ -169,11 +181,65 @@ class TracksViewSet(viewsets.ViewSet,
 
         return Response(data=Tracks(t, context={'request': request}).data, status=status.HTTP_200_OK)
 
+    @action(methods=['post'], detail=False, url_path='top',url_name="top")
+    def top_tracks(self, request):
+        name = request.data.get('name')
+        if name is not None:
+            try:
+                genre = Genre.objects.get(name=name)
+                # Tìm kiếm và sắp xếp các bài hát theo số lượt thích trong thể loại được chỉ định.
+                tracks = Tracks.objects.filter(fk_genre=genre, is_active=True).order_by('-like')
+                serializer = TracksSerializer(tracks, many=True)
+                response_data = {
+                    'error': None,
+                    'message': 'Tìm thành công',
+                    'statusCode': status.HTTP_200_OK,
+                    'results': serializer.data,
+                }
+                return Response(data=response_data, status=status.HTTP_200_OK)
+            except Genre.DoesNotExist:
+                response_data = {
+                    'error': serializer.errors,
+                    'message': 'Thể loại không tồn tại',
+                    'statusCode': status.HTTP_400_BAD_REQUEST,
+                    'results': None,
+                }
+                return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+        response_data = {
+            'error': 'Lỗi không tìm thấy tên thể loại',
+            'message': 'Lỗi không tìm thấy tên thể loại',
+            'statusCode': status.HTTP_400_BAD_REQUEST,
+            'results': None,
+        }
+        return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['get'], detail=True, url_path='comments')
+    def get_comments(self, request, pk):
+        try:
+            track = Tracks.objects.get(pk=pk)
+            comments = Comment.objects.filter(fk_tracks=track)
+            serializer = CommentSerializer(comments, many=True)
+            response_data = {
+                'error': None,
+                'message': 'Thành công',
+                'statusCode': status.HTTP_200_OK,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+        except Tracks.DoesNotExist:
+            response_data = {
+                'error': 'Bài hát không tồn tại',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+
 class GenreViewSet(viewsets.ViewSet,
                   generics.RetrieveAPIView,
                     generics.ListAPIView):
     queryset = Genre.objects.filter(is_active = True)
     serializer_class = GenreSerializer
+    pagination_class = Pagination
 
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -198,7 +264,7 @@ class GenreViewSet(viewsets.ViewSet,
     @action(methods=['post'], detail=True,
             url_path="hide-genre",
             url_name="hide-genre")
-    def hide_course(self, request, pk):
+    def hide_genre(self, request, pk):
         try:
             g = Genre.objects.get(pk=pk)
             g.is_active = False
@@ -206,4 +272,209 @@ class GenreViewSet(viewsets.ViewSet,
         except Genre.DoesNotExits:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(data=Tracks(g, context={'request': request}).data, status=status.HTTP_200_OK)
+        return Response(data=Genre(g, context={'request': request}).data, status=status.HTTP_200_OK)
+
+class PlaylistViewSet(
+                    viewsets.ViewSet,
+                    generics.RetrieveAPIView,
+                    generics.ListAPIView):
+    queryset = Playlist.objects.filter(is_active = True)
+    serializer_class = PlaylistSerializer
+    pagination_class = Pagination
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            response_data = {
+                'error': None,
+                'message': 'Success',
+                'statusCode': status.HTTP_200_OK,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+        except Playlist.DoesNotExist:
+            response_data = {
+                'error': 'Không tìm thấy.',
+                'message': 'Không tìm thấy.',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+
+    @action(methods=['post'], detail=True,
+            url_path="hide-playlist",
+            url_name="hide-playlist")
+    def hide_playlist(self, request, pk):
+        try:
+            p = Playlist.objects.get(pk=pk)
+            p.is_active = False
+            p.save()
+        except Genre.DoesNotExits:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(data=Playlist(p, context={'request': request}).data, status=status.HTTP_200_OK)
+
+class PlaylistTracksViewSet(
+                    viewsets.ViewSet,
+                    generics.RetrieveAPIView,
+                    generics.ListAPIView):
+    queryset = PlaylistTracks.objects.filter(is_active = True)
+    serializer_class = PlaylistTracksSerializer
+    pagination_class = Pagination
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            response_data = {
+                'error': None,
+                'message': 'Success',
+                'statusCode': status.HTTP_200_OK,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+        except PlaylistTracks.DoesNotExist:
+            response_data = {
+                'error': 'Không tìm thấy.',
+                'message': 'Không tìm thấy.',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+
+    @action(methods=['post'], detail=True,
+            url_path="hide-playlisttracks",
+            url_name="hide-playlisttracks")
+    def hide_playlisttracks(self, request, pk):
+        try:
+            p = PlaylistTracks.objects.get(pk=pk)
+            p.is_active = False
+            p.save()
+        except PlaylistTracks.DoesNotExits:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(data=PlaylistTracks(p, context={'request': request}).data, status=status.HTTP_200_OK)
+
+class CommentViewSet(
+                    viewsets.ViewSet,
+                    generics.RetrieveAPIView,
+                    generics.ListAPIView):
+    queryset = Comment.objects.filter(is_active = True)
+    serializer_class = CommentSerializer
+    pagination_class = Pagination
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            response_data = {
+                'error': None,
+                'message': 'Success',
+                'statusCode': status.HTTP_200_OK,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+        except Comment.DoesNotExist:
+            response_data = {
+                'error': 'Không tìm thấy.',
+                'message': 'Không tìm thấy.',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+
+    @action(methods=['post'], detail=True,
+            url_path="hide-comment",
+            url_name="hide-comment")
+    def hide_comment(self, request, pk):
+        try:
+            c = Comment.objects.get(pk=pk)
+            c.is_active = False
+            c.save()
+        except Comment.DoesNotExits:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(data=Comment(c, context={'request': request}).data, status=status.HTTP_200_OK)
+
+class LikeViewSet(
+                    viewsets.ViewSet,
+                    generics.RetrieveAPIView,
+                    generics.ListAPIView):
+    queryset = Like.objects.filter(is_active = True)
+    serializer_class = CommentSerializer
+    pagination_class = Pagination
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            response_data = {
+                'error': None,
+                'message': 'Success',
+                'statusCode': status.HTTP_200_OK,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+        except Like.DoesNotExist:
+            response_data = {
+                'error': 'Không tìm thấy.',
+                'message': 'Không tìm thấy.',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+
+    @action(methods=['post'], detail=True,
+            url_path="hide-like",
+            url_name="hide-like")
+    def hide_comment(self, request, pk):
+        try:
+            l = Like.objects.get(pk=pk)
+            l.is_active = False
+            l.save()
+        except Like.DoesNotExits:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(data=Like(l, context={'request': request}).data, status=status.HTTP_200_OK)
+
+class FollowerViewSet(
+                    viewsets.ViewSet,
+                    generics.RetrieveAPIView,
+                    generics.ListAPIView):
+    queryset = Follower.objects.filter(is_active = True)
+    serializer_class = FollowerSerializer
+    pagination_class = Pagination
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            response_data = {
+                'error': None,
+                'message': 'Success',
+                'statusCode': status.HTTP_200_OK,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+        except Follower.DoesNotExist:
+            response_data = {
+                'error': 'Không tìm thấy.',
+                'message': 'Không tìm thấy.',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+
+    @action(methods=['post'], detail=True,
+            url_path="hide-follower",
+            url_name="hide-follower")
+    def hide_comment(self, request, pk):
+        try:
+            f = Follower.objects.get(pk=pk)
+            f.is_active = False
+            f.save()
+        except Follower.DoesNotExits:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(data=Follower(f, context={'request': request}).data, status=status.HTTP_200_OK)

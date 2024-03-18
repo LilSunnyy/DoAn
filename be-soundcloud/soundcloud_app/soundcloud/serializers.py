@@ -45,20 +45,33 @@ class TracksSerializer(ModelSerializer):
         model = Tracks
         fields = '__all__'
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-
-        # Xóa domain từ URL hình ảnh
-        if 'photo' in representation and representation['photo']:
-            representation['photo'] = representation['photo'].replace(self.context['request'].build_absolute_uri('/'),'')
-        if 'url' in representation and representation['url']:
-            representation['url'] = representation['url'].replace(self.context['request'].build_absolute_uri('/'),
-                                                                      '')
-
-        return representation
-
 
 class GenreSerializer(ModelSerializer):
     class Meta:
         model = Genre
+        fields = '__all__'
+
+class PlaylistSerializer(ModelSerializer):
+    class Meta:
+        model = Playlist
+        fields = '__all__'
+
+class PlaylistTracksSerializer(ModelSerializer):
+    class Meta:
+        model = PlaylistTracks
+        fields = '__all__'
+
+class CommentSerializer(ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = '__all__'
+
+class LikeSerializer(ModelSerializer):
+    class Meta:
+        model = Like
+        fields = '__all__'
+
+class FollowerSerializer(ModelSerializer):
+    class Meta:
+        model = Follower
         fields = '__all__'

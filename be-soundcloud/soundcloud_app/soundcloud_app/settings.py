@@ -161,7 +161,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soundcloud',
         'USER': 'root',
-        'PASSWORD': '',
+        'PASSWORD': '25052002',
         'HOST': ''
     }
 }
