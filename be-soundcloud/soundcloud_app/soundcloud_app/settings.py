@@ -54,9 +54,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.account',
     'allauth.socialaccount.providers.github',
-    # 'dj_rest_auth',
-    # 'dj_rest_auth.registration',
-
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
 ]
 
 REST_AUTH = {
@@ -162,7 +161,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'soundcloud',
         'USER': 'root',
-        'PASSWORD': '25052002',
+        'PASSWORD': '',
         'HOST': ''
     }
 }
