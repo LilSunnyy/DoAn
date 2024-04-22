@@ -183,7 +183,7 @@ class TracksViewSet(viewsets.ViewSet,
 
     @action(methods=['post'], detail=False, url_path='top',url_name="top")
     def top_tracks(self, request):
-        name = request.data.get('name')
+        name = request.data.get('genre')
         if name is not None:
             try:
                 genre = Genre.objects.get(name=name)
