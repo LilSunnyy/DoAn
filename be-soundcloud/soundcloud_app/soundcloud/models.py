@@ -25,6 +25,7 @@ class Tracks(ItemBase):
     duration = models.IntegerField(default=0)
     photo = models.ImageField(upload_to='photos/%Y/%m')
     like = models.IntegerField(default=0)
+    view = models.IntegerField(default=0)
     url = models.FileField(default=None, blank=True, null=True, upload_to='song/%Y/%m')
     fk_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
                                      related_name="tracks_user")

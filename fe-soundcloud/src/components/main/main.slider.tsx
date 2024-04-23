@@ -11,11 +11,12 @@ import Link from "next/link";
 import { convertSlugUrl } from "@/utils/api";
 
 interface IProps {
-    results: ICourse[]
+    tracks: ITrack[],
+    title: string
 }
 
 const MainSlider = (props: IProps) => {
-    const { results } = props;
+    const { tracks, title } = props;
 
     const NextArrow = (props: any) => {
         return (
@@ -57,15 +58,59 @@ const MainSlider = (props: IProps) => {
         prevArrow: <PrevArrow />,
         slidesToScroll: 1,
         autoplay: true,
+        responsive: [
+            {
+                breakpoint: 1200,
+                settings: {
+                    nextArrow: <></>,
+                    prevArrow: <></>,
+                },
+            },
+            {
+                breakpoint: 900,
+                settings: {
+                    slidesToShow: 4,
+                    nextArrow: <></>,
+                    prevArrow: <></>,
+                },
+            },
+            {
+                breakpoint: 750,
+                settings: {
+                    slidesToShow: 3,
+                    nextArrow: <></>,
+                    prevArrow: <></>,
+                },
+            },
+            {
+                breakpoint: 630,
+                settings: {
+                    slidesToShow: 2,
+                    nextArrow: <></>,
+                    prevArrow: <></>,
+                },
+            },
+            {
+                breakpoint: 450,
+                settings: {
+                    slidesToShow: 1,
+                    nextArrow: <></>,
+                    prevArrow: <></>,
+                },
+            },
+        ],
     };
     return (
         <Box sx={{
-            margin: "0 50px",
-            ".course": {
+            margin: "50px 50px",
+            ".track": {
                 padding: "0 10px",
                 "img": {
                     height: 150,
                     width: 150
+                },
+                "h4": {
+                    width: 150,
                 }
             },
             "h3": {
@@ -74,14 +119,16 @@ const MainSlider = (props: IProps) => {
                 height: "200px",
             }
         }}>
-            <h2>Tieu de</h2>
+            <h2>{title}</h2>
             <Slider {...settings}>
-                {Array.isArray(results) && results.map(course => {
+                {Array.isArray(tracks) && tracks.map(track => {
                     return (
-                        <div className="course" key={course.id}>
-                            <Link href={`/course/${convertSlugUrl(course?.name)}-${course?.id}.html?tag=${course?.tag[0]?.name}`}>
-                                <img src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/static/${course?.image}`} alt="course" />
-                                <h4>{course.name}</h4>
+                        <div className="track" key={track.id}>
+                            <Link
+                                href={`/track/${convertSlugUrl(track?.title)}-${track?.id}.html?tag=${track?.fk_genre.name}`}
+                                style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <img src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/static/${track?.photo}`} alt="track" />
+                                <h4>{track.title}</h4>
                             </Link>
                         </div>
                     )
@@ -90,5 +137,6 @@ const MainSlider = (props: IProps) => {
             </Slider>
         </Box>
     );
+
 }
 export default MainSlider;

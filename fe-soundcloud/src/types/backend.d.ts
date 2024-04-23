@@ -1,3 +1,5 @@
+import { IUser } from "./next-auth";
+
 export { };
 // https://bobbyhadz.com/blog/typescript-make-types-global#declare-global-types-in-typescript
 
@@ -10,27 +12,8 @@ declare global {
 
     interface Itembase{
         id: number;
-        created_date: string;
-        updated_date:string;
-        is_active: boolean;
     }
 
-    interface IListening extends Itembase{
-        sound: string;
-        fk_lesson: string;
-    }
-
-    interface IReading extends Itembase{
-        paragraph: string;
-        fk_lesson: string;
-    }
-
-    interface ILesson extends Itembase{
-        description: string;
-        fk_course: number;
-        reading: IReading[];
-        listening: IListening[];
-    }
 
     interface backendResponse{
         access : string;
@@ -39,8 +22,8 @@ declare global {
     }
 
     interface ITrack extends Itembase{
-        fk_genre: number;
-        fk_user: number;
+        fk_genre: IGenre;
+        fk_user: IUser;
         description: string;
         photo: string;
         title:string;
@@ -76,8 +59,8 @@ declare global {
         result: T[]
     }
 
-    interface ICourseContext{
-        currentCourse: ICourse;
-        setCurrentCourse: (course: ICourse) => void;
+    interface ITrackContext{
+        currentTrack: ITrack;
+        setCurrentTrack: (track: ITrack) => void;
     }
 }

@@ -32,7 +32,6 @@ class UserSerializer(ModelSerializer):
 
             return '/static/%s' % user.avatar.name
 
-
     def create(self, validated_data):
         user = User(**validated_data)
         user.set_password(validated_data['password'])
@@ -40,16 +39,28 @@ class UserSerializer(ModelSerializer):
 
         return user
 
-class TracksSerializer(ModelSerializer):
-    class Meta:
-        model = Tracks
-        fields = '__all__'
-
-
 class GenreSerializer(ModelSerializer):
     class Meta:
         model = Genre
         fields = '__all__'
+
+class TracksSerializer(ModelSerializer):
+    fk_user = UserSerializer()
+    fk_genre = GenreSerializer()
+    class Meta:
+        model = Tracks
+        fields = '__all__'
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        # Xóa domain từ URL hình ảnh
+        if 'photo' and 'url' in representation and representation['photo']:
+            representation['photo'] = representation['photo'].replace(self.context['request'].build_absolute_uri('/'),
+                                                                      '')
+            representation['url'] = representation['url'].replace(self.context['request'].build_absolute_uri('/'),
+                                                                      '')
+        return representation
 
 class PlaylistSerializer(ModelSerializer):
     class Meta:

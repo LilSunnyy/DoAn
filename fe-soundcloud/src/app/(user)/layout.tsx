@@ -8,7 +8,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <>
       <AppHeader />
       {children}
-      {/* <AppFooter /> */}
+      <AppFooter />
     </>
   );
 }

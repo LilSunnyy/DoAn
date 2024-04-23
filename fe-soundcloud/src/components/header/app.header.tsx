@@ -185,7 +185,7 @@ export default function AppHeader() {
     return (
         <Box sx={{ flexGrow: 1 }}>
             <AppBar position="static"
-                sx={{ background: "#1DB954" }}>
+                sx={{ background: "#333333" }}>
                 <Container>
                     <Toolbar>
                         <Typography

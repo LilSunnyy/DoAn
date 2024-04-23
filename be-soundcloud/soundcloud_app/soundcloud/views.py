@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, generics,status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, DataAndFiles
 
 from .forms import UserRegisterForm, AdminRegisterForm, UserUpdateForm
 from .models import *
@@ -188,8 +188,8 @@ class TracksViewSet(viewsets.ViewSet,
             try:
                 genre = Genre.objects.get(name=name)
                 # Tìm kiếm và sắp xếp các bài hát theo số lượt thích trong thể loại được chỉ định.
-                tracks = Tracks.objects.filter(fk_genre=genre, is_active=True).order_by('-like')
-                serializer = TracksSerializer(tracks, many=True)
+                tracks = Tracks.objects.filter(fk_genre=genre, is_active=True).order_by('-view')
+                serializer = TracksSerializer(tracks, many=True, context={'request': request})
                 response_data = {
                     'error': None,
                     'message': 'Tìm thành công',

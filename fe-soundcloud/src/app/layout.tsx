@@ -1,7 +1,7 @@
 import AppFooter from '@/components/footer/app.footer';
 import AppHeader from '@/components/header/app.header';
 import ThemeRegistry from '@/components/theme-registry/theme.registry';
-import { CourseContextProvider } from '@/lib/course.wrapper';
+import { TrackContextProvider } from '@/lib/track.wrapper';
 import NextAuthWrapper from '@/lib/next.auth.wrapper';
 import NProgressWrapper from '@/lib/nprgress.wrapper';
 import { ToastProvider } from '@/utils/toast';
@@ -9,6 +9,8 @@ import { ToastProvider } from '@/utils/toast';
 const DRAWER_WIDTH = 240;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const dns = require('dns');
+  dns.setDefaultResultOrder('ipv4first');
   return (
     <html lang="en">
       <body>
@@ -16,9 +18,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <NProgressWrapper>
             <NextAuthWrapper>
               <ToastProvider>
-                <CourseContextProvider>
+                <TrackContextProvider>
                   {children}
-                </CourseContextProvider>
+                </TrackContextProvider>
               </ToastProvider>
             </NextAuthWrapper>
           </NProgressWrapper>

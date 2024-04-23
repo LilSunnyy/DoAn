@@ -3,27 +3,37 @@ import { sendRequest } from "@/utils/api";
 import { Container } from "@mui/material";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import Divider from '@mui/material/Divider';
+import HeadBanner from "@/components/banner/head.banner";
 
 export default async function HomePage() {
+
   const session = await getServerSession(authOptions);
 
-  const res = await fetch("http://127.0.0.1:8000/tracks/top/", {
+  const resPop = await sendRequest<IBackendRes<ITrack[]>>({
+    url: "http://localhost:8000/tracks/top/",
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      genre: "love"
-    })
+    body: { genre: "pop" }
   })
 
-  console.log(await res.json());
+  const resChill = await sendRequest<IBackendRes<ITrack[]>>({
+    url: "http://localhost:8000/tracks/top/",
+    method: "POST",
+    body: { genre: "chill" }
+  })
 
   return (
     <Container>
-      {/* <MainSlider
-        results={res?.results ?? []}
-      /> */}
+      <HeadBanner />
+      <MainSlider
+        tracks={resPop?.results ?? []}
+        title="Top Pop Tracks"
+      />
+      <Divider />
+      <MainSlider
+        tracks={resChill?.results ?? []}
+        title="Top Chill Tracks"
+      />
     </Container>
   );
 }
