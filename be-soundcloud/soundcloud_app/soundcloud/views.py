@@ -55,13 +55,13 @@ class GithubLogin(SocialLoginView):
 
 class UserViewSet(viewsets.ViewSet,
                   generics.ListAPIView):
-    queryset = User.objects.filter(is_active=True)
+    queryset = User.objects.filter(is_active=True).order_by('-date_joined')
     serializer_class = UserSerializer
-    parser_classes = [MultiPartParser, FormParser]
     pagination_class = Pagination
 
     def get_permissions(self):
-        if self.action == 'list' or self.action == 'hide_user':
+        if self.action == 'list' or self.action == 'hide_user' or self.action == 'register_user' \
+                or self.action == 'update_user':
             return [permissions.IsAdminUser()]
         # return [permissions.IsAuthenticated()]
 
