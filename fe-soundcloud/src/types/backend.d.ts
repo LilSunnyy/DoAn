@@ -27,7 +27,6 @@ declare global {
         description: string;
         photo: string;
         title:string;
-        duration: number;
         url: string;
         like:number;
     }

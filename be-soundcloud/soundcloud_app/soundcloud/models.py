@@ -22,7 +22,6 @@ class Tracks(ItemBase):
 
     title = models.CharField(max_length=255, null=True, unique=False)
     description =  models.TextField(null=True, blank=True)
-    duration = models.IntegerField(default=0)
     photo = models.ImageField(upload_to='photos/%Y/%m')
     like = models.IntegerField(default=0)
     view = models.IntegerField(default=0)

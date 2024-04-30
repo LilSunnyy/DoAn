@@ -1,3 +1,5 @@
+import mimetypes
+
 from rest_framework import viewsets, permissions, generics,status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
@@ -212,6 +214,25 @@ class TracksViewSet(viewsets.ViewSet,
             'results': None,
         }
         return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'], url_path='audio')
+    def get_audio_url(self, request, pk=None):
+        try:
+            track = self.get_object()
+            audio_file = track.url.path
+            with open(audio_file, 'rb') as file:
+                audio_data = file.read()
+            content_type, _ = mimetypes.guess_type(audio_file)
+            response = HttpResponse(audio_data, content_type=content_type)
+            return response
+        except Tracks.DoesNotExist:
+            response_data = {
+                'error': 'Không tìm thấy bài nhạc.',
+                'message': 'Không tìm thấy bài nhạc.',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'audio_url': None,
+            }
+            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
 
     @action(methods=['get'], detail=True, url_path='comments')
     def get_comments(self, request, pk):
