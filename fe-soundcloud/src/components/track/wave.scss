@@ -37,3 +37,11 @@
   .duration {
     right: 0;
   }
+
+  .overlay{
+    position: absolute;
+    height: 30px;
+    width: 100%;
+    bottom: 0;
+    backdrop-filter: brightness(0.5);
+  }
