@@ -65,7 +65,7 @@ class UserViewSet(viewsets.ViewSet,
         if self.action == 'list' or self.action == 'hide_user' or self.action == 'register_user' \
                 or self.action == 'update_user':
             return [permissions.IsAdminUser()]
-        # return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated()]
 
     @action(methods=['get'], detail=False, url_path='current-user')
     def current_user(self, request):

@@ -7,6 +7,8 @@ import { useWavesurfer } from '@wavesurfer/react';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import './wave.scss'
+import { calLeft } from "@/utils/utils";
+import { Tooltip } from "@mui/material";
 
 interface ISlug {
     id: string;
@@ -142,6 +144,31 @@ const WaveTrack = (slug: ISlug) => {
         wavesurfer && wavesurfer.on('timeupdate', (currentTime) => (timeEl.textContent = formatTime(currentTime)))
     }
 
+    const arrComments = [
+        {
+            id: 1,
+            avatar: `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/photos/2024/04/Screenshot_Capture_-_2024-04-23_-_21-14-07.png`,
+            moment: 10,
+            user: "username 1",
+            content: "just a comment1"
+        },
+        {
+            id: 2,
+            avatar: `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/photos/2024/04/Screenshot_Capture_-_2024-04-23_-_21-14-07.png`,
+            moment: 30,
+            user: "username 2",
+            content: "just a comment3"
+        },
+        {
+            id: 3,
+            avatar: `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/photos/2024/04/Screenshot_Capture_-_2024-04-23_-_21-14-07.png`,
+            moment: 50,
+            user: "username 3",
+            content: "just a comment3"
+        },
+    ]
+
+
     return (
         <div style={{ marginTop: 20 }}>
             <div
@@ -215,7 +242,30 @@ const WaveTrack = (slug: ISlug) => {
                         <div className={`${isReady && 'time'}`} ref={timeRef}>{isReady && "00:00"}</div>
                         <div className={`${isReady && 'duration'}`} ref={durationRef}>{wavesurfer && ""}</div>
                         <div className={`${isReady && 'hover-wave'}`} ref={hoverRef}></div>
-                        <div className={`${isReady && 'overlay'}`}></div>
+                        <div className={`${isReady && 'comments'}`}>
+                            {
+                                isReady && arrComments.map((comment) => {
+                                    return (
+                                        <Tooltip title={comment.content} arrow>
+                                            <img
+                                                className={`${isReady && 'img-comments'}`}
+                                                onPointerMove={(e) => {
+                                                    const hover = hoverRef.current;
+                                                    hover ? hover.style.width = calLeft(comment.moment + 3) : null;
+                                                }}
+                                                key={comment.id}
+                                                src={comment.avatar}
+                                                alt="sa"
+                                                style={{
+                                                    left: calLeft(comment.moment)
+                                                }} />
+                                        </Tooltip>
+
+                                    )
+                                })
+                            }
+                        </div>
+                        <div className={`${isReady && 'overlay-wave'}`}></div>
                     </div>
                 </div>
                 <div className="right"

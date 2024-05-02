@@ -60,6 +60,7 @@ class Comment(ItemBase):
         db_table = 'comment'
 
     comment_text = models.TextField(null=True, blank=True)
+    moment = models.IntegerField(default= 0)
     fk_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
                                      related_name="comment_user")
     fk_tracks = models.ForeignKey(Tracks, on_delete=models.SET_NULL, null=True,

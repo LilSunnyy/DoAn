@@ -19,7 +19,7 @@ import MoreIcon from '@mui/icons-material/MoreVert';
 import Container from '@mui/material/Container';
 import Avatar from '@mui/material/Avatar';
 import Link from 'next/link'
-import { useRouter } from 'next/navigation';
+import { redirect, useRouter } from 'next/navigation';
 import { useSession, signIn, signOut } from "next-auth/react"
 
 
@@ -87,6 +87,11 @@ export default function AppHeader() {
         handleMobileMenuClose();
     };
 
+
+    function handleRedirectHome() {
+        router.push("/")
+    }
+
     const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
         setMobileMoreAnchorEl(event.currentTarget);
     };
@@ -120,7 +125,7 @@ export default function AppHeader() {
             <MenuItem onClick={
                 () => {
                     handleMenuClose();
-                    signOut()
+                    signOut({ callbackUrl: '/', redirect: true })
                 }
             }>Log out</MenuItem>
         </Menu>
@@ -177,10 +182,6 @@ export default function AppHeader() {
             </MenuItem>
         </Menu>
     );
-
-    function handleRedirectHome() {
-        router.push("/")
-    }
 
     return (
         <Box sx={{ flexGrow: 1 }}>
