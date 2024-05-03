@@ -1,3 +1,4 @@
+from rest_framework.fields import SerializerMethodField
 from rest_framework.serializers import ModelSerializer
 from rest_framework import serializers
 from .models import *
@@ -45,11 +46,24 @@ class GenreSerializer(ModelSerializer):
         fields = '__all__'
 
 class TracksSerializer(ModelSerializer):
-    fk_user = UserSerializer()
-    fk_genre = GenreSerializer()
+    fk_user = SerializerMethodField()
+    fk_genre = SerializerMethodField()
+
     class Meta:
         model = Tracks
         fields = '__all__'
+
+    def get_fk_user(self, track):
+        user = track.fk_user
+        if user:
+            return UserSerializer(user).data
+        return None
+
+    def get_fk_genre(self, track):
+        genre = track.fk_genre
+        if genre:
+            return GenreSerializer(genre).data
+        return None
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)

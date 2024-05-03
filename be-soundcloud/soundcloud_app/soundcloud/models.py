@@ -22,7 +22,7 @@ class Tracks(ItemBase):
 
     title = models.CharField(max_length=255, null=True, unique=False)
     description =  models.TextField(null=True, blank=True)
-    photo = models.ImageField(upload_to='photos/%Y/%m')
+    photo = models.ImageField(upload_to='photos/%Y/%m',default=None, blank=True, null=True,)
     like = models.IntegerField(default=0)
     view = models.IntegerField(default=0)
     url = models.FileField(default=None, blank=True, null=True, upload_to='song/%Y/%m')

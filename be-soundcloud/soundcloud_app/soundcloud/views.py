@@ -21,6 +21,7 @@ from dj_rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from rest_framework.decorators import api_view
+import time
 
 class Pagination(PageNumberPagination):
     page_size = 5
@@ -146,9 +147,65 @@ class TracksViewSet(viewsets.ViewSet,
                   generics.RetrieveAPIView,
                     generics.ListAPIView,
                     generics.CreateAPIView):
-    queryset = Tracks.objects.filter(is_active = True)
+    queryset = Tracks.objects.filter(is_active=True).order_by('-created_date')
     serializer_class = TracksSerializer
     pagination_class = Pagination
+    parser_classes = (MultiPartParser, FormParser,)
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.IsAuthenticated()]
+
+    def create(self, request, *args, **kwargs):
+        # Xác định user từ request
+        user = request.user
+        serializer_class = self.get_serializer_class()
+        serializer = serializer_class(data=request.data)
+
+        target_type = self.request.headers['target-type']
+        if target_type == 'audio':
+            serializer.is_valid(raise_exception=True)
+            serializer.save(fk_user=user)
+            response_data = {
+                'error': None,
+                'message': 'Track Audio is uploaded successfully',
+                'statusCode': status.HTTP_201_CREATED,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_201_CREATED)
+        else:
+            try:
+                # Trích xuất id từ dữ liệu gửi lên từ client
+                track_id = request.data.get('id')
+
+                # Kiểm tra xem track_id có tồn tại không
+                if not track_id:
+                    raise ValueError("No track id provided.")
+
+                # Tạo serializer mới với instance là track với id đã trích xuất
+                serializer_class = self.get_serializer_class()
+                track_instance = self.get_queryset().get(pk=track_id)
+                serializer = serializer_class(track_instance, data=request.data, partial=True)
+
+                # Validate và lưu thông tin còn lại của track
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+
+                response_data = {
+                    'error': None,
+                    'message': 'Track is created successfully',
+                    'statusCode': status.HTTP_201_CREATED,
+                    'results': serializer.data,
+                }
+                return Response(data=response_data, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                response_data = {
+                    'error': str(e),
+                    'message': 'Error creating track',
+                    'statusCode': status.HTTP_400_BAD_REQUEST,
+                    'results': None,
+                }
+                return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
     def retrieve(self, request, *args, **kwargs):
         try:

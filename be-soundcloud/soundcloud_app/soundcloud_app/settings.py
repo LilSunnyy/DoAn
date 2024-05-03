@@ -101,6 +101,7 @@ CORS_ALLOW_HEADERS = (
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    "target-type",
 )
 
 MIDDLEWARE = [
