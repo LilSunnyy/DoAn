@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import { Tabs, Typography } from '@mui/material';
 import Step1 from './step/step1';
+import Step2 from './step/step2';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -41,6 +42,11 @@ function a11yProps(index: number) {
 
 const UploadTabs = () => {
     const [value, setValue] = React.useState(0);
+    const [trackUpload, setTrackUpload] = React.useState({
+        fileName: "",
+        percent: 0,
+        id: 0,
+    });
 
     const handleChange = (event: React.SyntheticEvent, newValue: number) => {
         setValue(newValue);
@@ -55,10 +61,16 @@ const UploadTabs = () => {
                 </Tabs>
             </Box>
             <CustomTabPanel value={value} index={0}>
-                <Step1 />
+                <Step1
+                    setValue={setValue}
+                    trackUpload={trackUpload}
+                    setTrackUpload={setTrackUpload}
+                />
             </CustomTabPanel>
             <CustomTabPanel value={value} index={1}>
-                <Step1 />
+                <Step2
+                    trackUpload={trackUpload}
+                />
             </CustomTabPanel>
         </Box>
     );

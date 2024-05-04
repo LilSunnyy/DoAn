@@ -3,34 +3,55 @@
 import { FileWithPath, useDropzone } from 'react-dropzone'
 import './dropzone.scss'
 import InputFileButton from './button/upload.button';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { sendRequest } from '@/utils/api';
 import { useSession } from 'next-auth/react';
 import axios, { AxiosProgressEvent } from 'axios';
 
-const Step1 = () => {
+interface IProps {
+    setValue: (v: number) => void;
+    setTrackUpload: React.Dispatch<React.SetStateAction<{
+        fileName: string;
+        percent: number;
+        id: number;
+    }>>;
+    trackUpload: {
+        fileName: string;
+        percent: number;
+        id: number;
+    }
+}
+
+const Step1 = (props: IProps) => {
     const { data: session } = useSession();
-    const config = {
-        headers: {
-            'Content-Type': 'multipart/form-data', // Thêm dòng này để Axios biết là bạn đang gửi FormData
-            'Authorization': `Bearer ${session?.access_token}`,
-            "target-type": "audio",
-        },
-        onUploadProgress: (progressEvent: AxiosProgressEvent) => {
-            let percentCompleted = Math.floor((progressEvent.loaded * 100) / progressEvent.total!);
-            console.log(percentCompleted)
-        }
-    };
+    const { trackUpload } = props;
     const onDrop = useCallback(async (acceptedFiles: FileWithPath[]) => {
         if (acceptedFiles && acceptedFiles[0]) {
+            props.setValue(1);
             const audio = acceptedFiles[0];
             const formData = new FormData();
             formData.append('url', audio)
 
             try {
-                const res = await axios.post('http://localhost:8000/tracks/', formData, config
-                )
-                console.log(res.data)
+                const res = await axios.post('http://localhost:8000/tracks/', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data', // Thêm dòng này để Axios biết là bạn đang gửi FormData
+                        'Authorization': `Bearer ${session?.access_token}`,
+                        "target-type": "audio",
+                    },
+                    onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+                        let percentCompleted = Math.floor((progressEvent.loaded * 100) / progressEvent.total!);
+                        props.setTrackUpload({
+                            ...trackUpload,
+                            fileName: acceptedFiles[0].name,
+                            percent: percentCompleted as number,
+                        });
+                    }
+                })
+                res && props.setTrackUpload((prevState: any) => ({
+                    ...prevState,
+                    id: res.data.results.id as number ?? 0
+                }))
             } catch (error) {
                 //@ts-ignore
                 alert(error?.response?.data)

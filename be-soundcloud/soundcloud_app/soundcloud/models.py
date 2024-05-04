@@ -88,5 +88,5 @@ class Genre(ItemBase):
     class Meta:
         db_table = 'genre'
 
-    name = models.CharField(max_length=255, null=True, unique=False)
+    name = models.CharField(max_length=255, null=True, unique=True)
     description = models.TextField(null=True, blank=True)

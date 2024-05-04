@@ -3,7 +3,7 @@ import mimetypes
 from rest_framework import viewsets, permissions, generics,status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser, DataAndFiles
+from rest_framework.parsers import MultiPartParser, FormParser, DataAndFiles, JSONParser
 
 from .forms import UserRegisterForm, AdminRegisterForm, UserUpdateForm
 from .models import *
@@ -150,11 +150,14 @@ class TracksViewSet(viewsets.ViewSet,
     queryset = Tracks.objects.filter(is_active=True).order_by('-created_date')
     serializer_class = TracksSerializer
     pagination_class = Pagination
-    parser_classes = (MultiPartParser, FormParser,)
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+    lookup_field = 'id'
 
     def get_permissions(self):
         if self.action == 'create':
             return [permissions.IsAuthenticated()]
+        else:
+            return [permissions.AllowAny()]
 
     def create(self, request, *args, **kwargs):
         # Xác định user từ request
@@ -230,9 +233,9 @@ class TracksViewSet(viewsets.ViewSet,
     @action(methods=['post'], detail=True,
             url_path="hide-tracks",
             url_name="hide-tracks")
-    def hide_tracks(self, request, pk):
+    def hide_tracks(self, request, id):
         try:
-            t = Tracks.objects.get(pk=pk)
+            t = Tracks.objects.get(pk=id)
             t.is_active = False
             t.save()
         except Tracks.DoesNotExits:
@@ -273,7 +276,7 @@ class TracksViewSet(viewsets.ViewSet,
         return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['get'], url_path='audio')
-    def get_audio_url(self, request, pk=None):
+    def get_audio_url(self, request, id=None):
         try:
             track = self.get_object()
             audio_file = track.url.path
