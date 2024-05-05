@@ -27,43 +27,51 @@ const Step1 = (props: IProps) => {
     const { trackUpload } = props;
     const onDrop = useCallback(async (acceptedFiles: FileWithPath[]) => {
         if (acceptedFiles && acceptedFiles[0]) {
-            props.setValue(1);
             const audio = acceptedFiles[0];
-            const formData = new FormData();
-            formData.append('url', audio)
+            if (audio.type.startsWith('audio/')) {
+                props.setValue(1);
+                const formData = new FormData();
+                formData.append('url', audio);
+                formData.append("is_active", "true");
 
-            try {
-                const res = await axios.post('http://localhost:8000/tracks/', formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data', // Thêm dòng này để Axios biết là bạn đang gửi FormData
-                        'Authorization': `Bearer ${session?.access_token}`,
-                        "target-type": "audio",
-                    },
-                    onUploadProgress: (progressEvent: AxiosProgressEvent) => {
-                        let percentCompleted = Math.floor((progressEvent.loaded * 100) / progressEvent.total!);
-                        props.setTrackUpload({
-                            ...trackUpload,
-                            fileName: acceptedFiles[0].name,
-                            percent: percentCompleted as number,
-                        });
+                try {
+                    const res = await axios.post('http://localhost:8000/tracks/', formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                            'Authorization': `Bearer ${session?.access_token}`,
+                            "target-type": "audio",
+                        },
+                        onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+                            let percentCompleted = Math.floor((progressEvent.loaded * 100) / progressEvent.total!);
+                            props.setTrackUpload({
+                                ...trackUpload,
+                                fileName: audio.name,
+                                percent: percentCompleted,
+                            });
+                        }
+                    });
+                    if (res) {
+                        props.setTrackUpload((prevState: any) => ({
+                            ...prevState,
+                            id: res.data.results.id ?? 0
+                        }));
                     }
-                })
-                res && props.setTrackUpload((prevState: any) => ({
-                    ...prevState,
-                    id: res.data.results.id as number ?? 0
-                }))
-            } catch (error) {
-                //@ts-ignore
-                alert(error?.response?.data)
+                } catch (error) {
+                    //@ts-ignore
+                    alert(error?.response?.data);
+                }
+            } else {
+                alert("Vui lòng chọn một tệp âm thanh.");
             }
         }
-    }, [session])
+    }, [session]);
+
 
     const { acceptedFiles, getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
-        // accept: {
-        //     'audio': ['mp3']
-        // }
+        accept: {
+            'audio/*': ['.mp3', '.wav', '.ogg', '.flac', '.aiff']
+        }
     });
 
     const files = acceptedFiles.map((file: FileWithPath) => (

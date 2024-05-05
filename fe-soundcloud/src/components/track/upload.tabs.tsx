@@ -40,7 +40,12 @@ function a11yProps(index: number) {
     };
 }
 
-const UploadTabs = () => {
+interface IProps {
+    genres: IGenre[]
+}
+
+const UploadTabs = (props: IProps) => {
+    const { genres } = props;
     const [value, setValue] = React.useState(0);
     const [trackUpload, setTrackUpload] = React.useState({
         fileName: "",
@@ -70,6 +75,7 @@ const UploadTabs = () => {
             <CustomTabPanel value={value} index={1}>
                 <Step2
                     trackUpload={trackUpload}
+                    genres={genres}
                 />
             </CustomTabPanel>
         </Box>

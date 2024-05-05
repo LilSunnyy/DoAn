@@ -16,6 +16,10 @@ import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import { useState } from "react";
+import axios from 'axios';
+import { useSession } from 'next-auth/react';
+import Image from 'next/image'
+import { sendRequest } from "@/utils/api";
 
 function LinearProgressWithLabel(props: LinearProgressProps & { value: number }) {
     return (
@@ -32,18 +36,19 @@ function LinearProgressWithLabel(props: LinearProgressProps & { value: number })
     );
 }
 
-function LinearWithValueLabel(trackUpload: IProps) {
+function LinearWithValueLabel(trackUpload: {
+    trackUpload: {
+        fileName: string;
+        percent: number;
+        id: number;
+    }
+}) {
 
     return (
         <Box sx={{ width: '100%' }}>
             <LinearProgressWithLabel value={trackUpload.trackUpload.percent} />
         </Box>
     );
-}
-interface TabPanelProps {
-    children?: React.ReactNode;
-    index: number;
-    value: number;
 }
 
 const VisuallyHiddenInput = styled('input')({
@@ -58,43 +63,13 @@ const VisuallyHiddenInput = styled('input')({
     width: 1,
 });
 
-function InputFileUpload() {
-    return (
-        <Button
-            onClick={(e) => e.preventDefault()}
-            component="label" variant="contained" startIcon={<CloudUploadIcon />}>
-            Upload file
-            <VisuallyHiddenInput type="file" />
-        </Button>
-    );
-}
-
-function CustomTabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
-
-    return (
-        <div
-            role="tabpanel"
-            hidden={value !== index}
-            id={`simple-tabpanel-${index}`}
-            aria-labelledby={`simple-tab-${index}`}
-            {...other}
-        >
-            {value === index && (
-                <Box sx={{ p: 3 }}>
-                    {children}
-                </Box>
-            )}
-        </div>
-    );
-}
-
 interface IProps {
     trackUpload: {
         fileName: string;
         percent: number;
         id: number;
-    }
+    },
+    genres: IGenre[]
 }
 
 interface INewTrack {
@@ -105,7 +80,12 @@ interface INewTrack {
     url: string;
 }
 
+
+
 const Step2 = (props: IProps) => {
+    const { genres, trackUpload } = props;
+    const [fileSelected, setFileSelected] = React.useState<File | null>(null)
+    const { data: session } = useSession();
     const [infor, setInfor] = useState<INewTrack>({
         fk_genre: "",
         description: "",
@@ -113,20 +93,103 @@ const Step2 = (props: IProps) => {
         title: "",
         url: ""
     })
-    const category = [
-        {
-            value: 'CHILL',
-            label: 'CHILL',
+    const [error, setError] = useState({
+        title: {
+            error: false,
+            errorMessage: 'Tiêu đề không được bỏ trống'
         },
-        {
-            value: 'WORKOUT',
-            label: 'WORKOUT',
+        description: {
+            error: false,
+            errorMessage: 'Mô tả không được để trống'
         },
-        {
-            value: 'PARTY',
-            label: 'PARTY',
+        fk_genre: {
+            error: false,
+            errorMessage: 'Thể loại chưa được chọn'
+        },
+    })
+
+    function InputFileUpload() {
+        const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const event = e.target as HTMLInputElement;
+            if (event.files) {
+                const file = event.files[0];
+                if (file.type.startsWith('image/')) {
+                    const formData = new FormData();
+                    setFileSelected(file);
+                    formData.append("photo", file, file.name);
+                    formData.append("id", trackUpload.id.toString())
+                    if (trackUpload.id !== 0) {
+                        handleFileUpload(formData);
+                    } else {
+                        alert("Việc tải âm thanh chưa hoàn thành")
+                    }
+
+                }
+            }
+        };
+
+        return (
+            <Button
+                component="label"
+                variant="contained"
+                startIcon={<CloudUploadIcon />}
+            >
+                Upload file
+                <input
+                    type="file"
+                    onChange={onFileChange}
+                    style={{ display: "none" }}
+                />
+            </Button>
+        );
+    }
+
+    const handleFileUpload = async (formData: FormData) => {
+        try {
+            const res = await axios.post('http://localhost:8000/tracks/', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${session?.access_token}`,
+                },
+            })
+            setInfor({
+                ...infor,
+                photo: res.data.results.photo ?? ''
+            })
+        } catch (error) {
+            //@ts-ignore
+            alert(error?.response?.data)
         }
-    ];
+    }
+
+    const handleSubmitForm = async () => {
+        if (infor.title === '' || infor.description === '') {
+            if (infor.fk_genre === '') {
+                const newErrorState = {
+                    ...error,
+                    fk_genre: {
+                        error: true,
+                        errorMessage: error.fk_genre.errorMessage
+                    }
+                };
+                setError(newErrorState);
+            }
+            return
+        }
+        const resPop = await sendRequest<IBackendRes<ITrack>>({
+            url: "http://localhost:8000/tracks/",
+            method: "POST",
+            headers: {
+                'Authorization': `Bearer ${session?.access_token}`,
+            },
+            body: {
+                id: trackUpload.id,
+                title: infor.title,
+                description: infor.description,
+                fk_genre: infor.fk_genre,
+            }
+        })
+    }
 
     return (
         <div>
@@ -135,7 +198,7 @@ const Step2 = (props: IProps) => {
                     {props.trackUpload.fileName}
                 </div>
                 <LinearWithValueLabel
-                    trackUpload={props.trackUpload}
+                    trackUpload={trackUpload}
                 />
             </div>
 
@@ -150,9 +213,15 @@ const Step2 = (props: IProps) => {
                     }}
                 >
                     <div style={{ height: 250, width: 250, background: "#ccc" }}>
-                        <div>
-
-                        </div>
+                        {infor.photo && (
+                            <Image
+                                src={process.env.NEXT_PUBLIC_BACKEND_URL_IMAGE + (infor.photo).substring(1) || ""}
+                                width={250}
+                                height={250}
+                                alt={infor.title}
+                                quality={80}
+                            />
+                        )}
 
                     </div>
                     <div >
@@ -162,24 +231,48 @@ const Step2 = (props: IProps) => {
                 </Grid>
                 <Grid item xs={6} md={8}>
                     <TextField
-                        label="Title"
+                        label="Tiêu đề"
                         variant="standard"
+                        required
                         fullWidth margin="dense"
-                        value={props.trackUpload.fileName.split('.').slice(0, -1).join('.')}
+                        value={infor?.title ?? props.trackUpload.fileName.split('.').slice(0, -1).join('.')}
+                        error={error.title.error}
+                        helperText={error.title.error ? error.title.errorMessage : ''}
                         onChange={(e) => {
+                            const descriptionValue = e.target.value.trim();
+                            const newErrorState = {
+                                ...error,
+                                title: {
+                                    error: descriptionValue === '',
+                                    errorMessage: error.title.errorMessage
+                                }
+                            };
+                            setError(newErrorState);
                             setInfor({
                                 ...infor,
-                                title: e.target.value
-                            })
+                                title: descriptionValue
+                            });
                         }}
                     />
                     <TextField
-                        label="Description"
+                        label="Mô tả"
                         variant="standard"
                         fullWidth
                         margin="dense"
+                        required
                         value={infor?.description ?? ""}
+                        error={error.description.error}
+                        helperText={error.description.error ? error.description.errorMessage : ''}
                         onChange={(e) => {
+                            const descriptionValue = e.target.value.trim();
+                            const newErrorState = {
+                                ...error,
+                                description: {
+                                    error: descriptionValue === '',
+                                    errorMessage: error.description.errorMessage
+                                }
+                            };
+                            setError(newErrorState);
                             setInfor({
                                 ...infor,
                                 description: e.target.value
@@ -191,20 +284,30 @@ const Step2 = (props: IProps) => {
                             mt: 3
                         }}
                         select
-                        label="Category"
+                        label="Thể loại"
                         fullWidth
                         variant="standard"
                         value={infor?.fk_genre ?? ""}
+                        error={error.fk_genre.error}
+                        helperText={error.fk_genre.error ? error.fk_genre.errorMessage : ''}
                         onChange={(e) => {
+                            const newErrorState = {
+                                ...error,
+                                fk_genre: {
+                                    error: e.target.value ? false : true,
+                                    errorMessage: error.fk_genre.errorMessage
+                                }
+                            };
+                            setError(newErrorState);
                             setInfor({
                                 ...infor,
                                 fk_genre: e.target.value
                             })
                         }}
                     >
-                        {category.map((option) => (
-                            <MenuItem key={option.value} value={option.value}>
-                                {option.label}
+                        {genres.map((genre) => (
+                            <MenuItem key={genre.id} value={genre.id}>
+                                {genre.name}
                             </MenuItem>
                         ))}
                     </TextField>
@@ -212,7 +315,11 @@ const Step2 = (props: IProps) => {
                         variant="outlined"
                         sx={{
                             mt: 5
-                        }}>Save</Button>
+                        }}
+                        onClick={() => {
+                            handleSubmitForm()
+                        }}
+                    >Save</Button>
                 </Grid>
             </Grid>
 

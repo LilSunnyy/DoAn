@@ -22,6 +22,7 @@ from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from rest_framework.decorators import api_view
 import time
+from rest_framework.exceptions import ValidationError
 
 class Pagination(PageNumberPagination):
     page_size = 5
@@ -163,10 +164,10 @@ class TracksViewSet(viewsets.ViewSet,
         # Xác định user từ request
         user = request.user
         serializer_class = self.get_serializer_class()
-        serializer = serializer_class(data=request.data)
 
-        target_type = self.request.headers['target-type']
-        if target_type == 'audio':
+        # Kiểm tra xem header 'target-type' có trong request không
+        if 'target-type' in self.request.headers:
+            serializer = serializer_class(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save(fk_user=user)
             response_data = {
@@ -180,14 +181,31 @@ class TracksViewSet(viewsets.ViewSet,
             try:
                 # Trích xuất id từ dữ liệu gửi lên từ client
                 track_id = request.data.get('id')
+                genre_id = request.data.get('fk_genre')
+
+                # Kiểm tra xem genre_id có tồn tại không
+                if not genre_id:
+                    response_data = {
+                        'error': 'No genre ID provided',
+                        'message': 'No genre ID provided',
+                        'statusCode': status.HTTP_400_BAD_REQUEST,
+                        'results': None,
+                    }
+                    return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
                 # Kiểm tra xem track_id có tồn tại không
                 if not track_id:
-                    raise ValueError("No track id provided.")
+                    response_data = {
+                        'error': 'No track ID provided',
+                        'message': 'No track ID provided',
+                        'statusCode': status.HTTP_400_BAD_REQUEST,
+                        'results': None,
+                    }
+                    return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
                 # Tạo serializer mới với instance là track với id đã trích xuất
-                serializer_class = self.get_serializer_class()
-                track_instance = self.get_queryset().get(pk=track_id)
+                track_instance = self.get_queryset().get(id=track_id)
+                track_instance.fk_genre_id = genre_id
                 serializer = serializer_class(track_instance, data=request.data, partial=True)
 
                 # Validate và lưu thông tin còn lại của track
@@ -201,7 +219,7 @@ class TracksViewSet(viewsets.ViewSet,
                     'results': serializer.data,
                 }
                 return Response(data=response_data, status=status.HTTP_201_CREATED)
-            except Exception as e:
+            except ValidationError as e:
                 response_data = {
                     'error': str(e),
                     'message': 'Error creating track',

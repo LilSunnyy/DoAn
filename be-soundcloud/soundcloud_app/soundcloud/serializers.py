@@ -68,13 +68,18 @@ class TracksSerializer(ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
-        # Xóa domain từ URL hình ảnh
-        if 'photo' and 'url' in representation and representation['photo']:
-            representation['photo'] = representation['photo'].replace(self.context['request'].build_absolute_uri('/'),
-                                                                      '')
-            representation['url'] = representation['url'].replace(self.context['request'].build_absolute_uri('/'),
-                                                                      '')
+        # Kiểm tra xem có 'request' trong context hay không
+        if 'request' in self.context:
+            # Xóa domain từ URL hình ảnh
+            if 'photo' in representation and representation['photo']:
+                representation['photo'] = representation['photo'].replace(
+                    self.context['request'].build_absolute_uri('/'), '')
+            if 'url' in representation and representation['url']:
+                representation['url'] = representation['url'].replace(
+                    self.context['request'].build_absolute_uri('/'), '')
+
         return representation
+
 
 class PlaylistSerializer(ModelSerializer):
     class Meta:
