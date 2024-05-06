@@ -20,6 +20,7 @@ import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image'
 import { sendRequest } from "@/utils/api";
+import { useToast } from "@/utils/toast";
 
 function LinearProgressWithLabel(props: LinearProgressProps & { value: number }) {
     return (
@@ -69,7 +70,8 @@ interface IProps {
         percent: number;
         id: number;
     },
-    genres: IGenre[]
+    genres: IGenre[],
+    setValue: (v: number) => void;
 }
 
 interface INewTrack {
@@ -83,8 +85,9 @@ interface INewTrack {
 
 
 const Step2 = (props: IProps) => {
-    const { genres, trackUpload } = props;
-    const [fileSelected, setFileSelected] = React.useState<File | null>(null)
+    const toast = useToast();
+    const { genres, trackUpload, setValue } = props;
+    const [fileSelected, setFileSelected] = React.useState<File | null>(null);
     const { data: session } = useSession();
     const [infor, setInfor] = useState<INewTrack>({
         fk_genre: "",
@@ -92,7 +95,9 @@ const Step2 = (props: IProps) => {
         photo: "",
         title: "",
         url: ""
-    })
+    });
+
+    console.log("props:", genres)
     const [error, setError] = useState({
         title: {
             error: false,
@@ -106,7 +111,7 @@ const Step2 = (props: IProps) => {
             error: false,
             errorMessage: 'Thể loại chưa được chọn'
         },
-    })
+    });
 
     function InputFileUpload() {
         const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,9 +126,11 @@ const Step2 = (props: IProps) => {
                     if (trackUpload.id !== 0) {
                         handleFileUpload(formData);
                     } else {
-                        alert("Việc tải âm thanh chưa hoàn thành")
+                        toast.error("Vui lòng đợi quá trình tải âm thanh hoàn thành")
                     }
 
+                } else {
+                    toast.error("Vui lòng tải lên đúng định dạng ảnh")
                 }
             }
         };
@@ -137,6 +144,7 @@ const Step2 = (props: IProps) => {
                 Upload file
                 <input
                     type="file"
+                    accept="image/*"
                     onChange={onFileChange}
                     style={{ display: "none" }}
                 />
@@ -150,6 +158,7 @@ const Step2 = (props: IProps) => {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${session?.access_token}`,
+                    "target-type": "photo",
                 },
             })
             setInfor({
@@ -158,24 +167,37 @@ const Step2 = (props: IProps) => {
             })
         } catch (error) {
             //@ts-ignore
-            alert(error?.response?.data)
+            const errorMessage = error?.response?.data?.message;
+            toast.error(errorMessage ?? "Lỗi khi tải ảnh")
         }
     }
 
     const handleSubmitForm = async () => {
-        if (infor.title === '' || infor.description === '') {
-            if (infor.fk_genre === '') {
-                const newErrorState = {
-                    ...error,
-                    fk_genre: {
-                        error: true,
-                        errorMessage: error.fk_genre.errorMessage
-                    }
-                };
-                setError(newErrorState);
-            }
-            return
+        if (infor.title === '') {
+            toast.error("Tiêu đề đang bị bỏ trống");
+            return;
+        } else if (infor.description === '') {
+            toast.error("Mô tả đang bị bỏ trống");
+            return;
+        } else if (trackUpload.percent !== 100) {
+            toast.error("Quá trình tải âm thanh chưa hoàn tất, vui lòng đợi trong giây lát");
+            return;
+        } else if (infor.fk_genre === '') {
+            toast.error("Thể loại chưa được lựa chọn");
+            const newErrorState = {
+                ...error,
+                fk_genre: {
+                    error: true,
+                    errorMessage: error.fk_genre.errorMessage
+                }
+            };
+            setError(newErrorState);
+            return;
+        } else if (infor.photo === '') {
+            toast.error("Hình ảnh chưa được chọn");
+            return;
         }
+
         const resPop = await sendRequest<IBackendRes<ITrack>>({
             url: "http://localhost:8000/tracks/",
             method: "POST",
@@ -189,6 +211,12 @@ const Step2 = (props: IProps) => {
                 fk_genre: infor.fk_genre,
             }
         })
+        if (resPop.error) {
+            toast.error("Tạo Track thất bại")
+        } else {
+            setValue(0)
+            toast.success("Tạo Track thành công")
+        }
     }
 
     return (
@@ -213,7 +241,7 @@ const Step2 = (props: IProps) => {
                     }}
                 >
                     <div style={{ height: 250, width: 250, background: "#ccc" }}>
-                        {infor.photo && (
+                        {infor.photo !== '' && (
                             <Image
                                 src={process.env.NEXT_PUBLIC_BACKEND_URL_IMAGE + (infor.photo).substring(1) || ""}
                                 width={250}
@@ -231,7 +259,7 @@ const Step2 = (props: IProps) => {
                 </Grid>
                 <Grid item xs={6} md={8}>
                     <TextField
-                        label="Tiêu đề"
+                        label="Title"
                         variant="standard"
                         required
                         fullWidth margin="dense"
@@ -255,7 +283,7 @@ const Step2 = (props: IProps) => {
                         }}
                     />
                     <TextField
-                        label="Mô tả"
+                        label="Description"
                         variant="standard"
                         fullWidth
                         margin="dense"
@@ -284,7 +312,7 @@ const Step2 = (props: IProps) => {
                             mt: 3
                         }}
                         select
-                        label="Thể loại"
+                        label="Genre"
                         fullWidth
                         variant="standard"
                         value={infor?.fk_genre ?? ""}

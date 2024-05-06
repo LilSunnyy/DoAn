@@ -160,13 +160,36 @@ class TracksViewSet(viewsets.ViewSet,
         else:
             return [permissions.AllowAny()]
 
+    @action(detail=False, methods=['post'], url_path='user')
+    def get_user_tracks(self, request):
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'error': 'Thiếu thông tin user_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            response_data = {
+                'error': 'Người dùng không tồn tại',
+                'message': 'Người dùng không tồn tại',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'results': None,
+            }
+            return Response(data= response_data, status=status.HTTP_400_BAD_REQUEST)
+
+        tracks = Tracks.objects.filter(fk_user=user)
+
+        serializer = TracksSerializer(tracks, many=True, context={'request': request})
+
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
     def create(self, request, *args, **kwargs):
         # Xác định user từ request
         user = request.user
         serializer_class = self.get_serializer_class()
 
         # Kiểm tra xem header 'target-type' có trong request không
-        if 'target-type' in self.request.headers:
+        if 'target-type' in self.request.headers and self.request.headers['target-type'] == 'audio':
             serializer = serializer_class(data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save(fk_user=user)
@@ -184,9 +207,9 @@ class TracksViewSet(viewsets.ViewSet,
                 genre_id = request.data.get('fk_genre')
 
                 # Kiểm tra xem genre_id có tồn tại không
-                if not genre_id:
+                if not genre_id and 'target-type' not in self.request.headers:
                     response_data = {
-                        'error': 'No genre ID provided',
+                        'error': 'ID của thể loại chưa được cung cấp',
                         'message': 'No genre ID provided',
                         'statusCode': status.HTTP_400_BAD_REQUEST,
                         'results': None,
@@ -336,9 +359,8 @@ class TracksViewSet(viewsets.ViewSet,
 class GenreViewSet(viewsets.ViewSet,
                   generics.RetrieveAPIView,
                     generics.ListAPIView):
-    queryset = Genre.objects.filter(is_active = True)
+    queryset = Genre.objects.filter(is_active = True).order_by('id')
     serializer_class = GenreSerializer
-    pagination_class = Pagination
 
     def retrieve(self, request, *args, **kwargs):
         try:

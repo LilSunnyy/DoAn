@@ -7,6 +7,7 @@ import { useCallback, useState } from 'react';
 import { sendRequest } from '@/utils/api';
 import { useSession } from 'next-auth/react';
 import axios, { AxiosProgressEvent } from 'axios';
+import { useToast } from '@/utils/toast';
 
 interface IProps {
     setValue: (v: number) => void;
@@ -23,6 +24,7 @@ interface IProps {
 }
 
 const Step1 = (props: IProps) => {
+    const toast = useToast();
     const { data: session } = useSession();
     const { trackUpload } = props;
     const onDrop = useCallback(async (acceptedFiles: FileWithPath[]) => {
@@ -58,10 +60,11 @@ const Step1 = (props: IProps) => {
                     }
                 } catch (error) {
                     //@ts-ignore
-                    alert(error?.response?.data);
+                    const errorString = error?.response?.data.message
+                    toast.error(errorString ?? "Lỗi khi tải âm thanh")
                 }
             } else {
-                alert("Vui lòng chọn một tệp âm thanh.");
+                toast.error("Vui lòng chọn một tệp âm thanh.")
             }
         }
     }, [session]);

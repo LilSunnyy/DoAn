@@ -61,8 +61,16 @@ const UploadTabs = (props: IProps) => {
         <Box sx={{ width: '100%', mt: '50px', border: '0.5px solid #ccc' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <Tabs value={value} onChange={handleChange} aria-label="basic tabs example">
-                    <Tab label="Tracks" {...a11yProps(0)} />
-                    <Tab label="Basic information" {...a11yProps(1)} />
+                    <Tab
+                        disabled={value !== 0}
+                        label="Tracks"
+                        {...a11yProps(0)}
+                    />
+                    <Tab
+                        disabled={value !== 1}
+                        label="Basic information"
+                        {...a11yProps(1)}
+                    />
                 </Tabs>
             </Box>
             <CustomTabPanel value={value} index={0}>
@@ -74,6 +82,7 @@ const UploadTabs = (props: IProps) => {
             </CustomTabPanel>
             <CustomTabPanel value={value} index={1}>
                 <Step2
+                    setValue={setValue}
                     trackUpload={trackUpload}
                     genres={genres}
                 />
