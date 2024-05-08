@@ -180,8 +180,13 @@ class TracksViewSet(viewsets.ViewSet,
         tracks = Tracks.objects.filter(fk_user=user)
 
         serializer = TracksSerializer(tracks, many=True, context={'request': request})
-
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
+        response_data = {
+            'error': None,
+            'message': 'Lấy danh sách track của người dùng thành công',
+            'statusCode': status.HTTP_200_OK,
+            'results': serializer.data,
+        }
+        return Response(data=response_data, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
         # Xác định user từ request

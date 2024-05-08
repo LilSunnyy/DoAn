@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import { createContext, useContext, useState } from "react";
 
@@ -12,11 +12,12 @@ export const TrackContextProvider = ({ children }: { children: React.ReactNode }
         description: "",
         photo: "",
         title: "",
-        duration: 0,
         url: "",
-        like: 0
+        like: 0,
+        view: 0,
+        isPlaying: false,
     }
-    const [currentTrack, setCurrentTrack] = useState<ITrack>(initValue);
+    const [currentTrack, setCurrentTrack] = useState<IShareTrack>(initValue);
 
     return (
         <TrackContext.Provider value={{ currentTrack, setCurrentTrack }}>
@@ -25,4 +26,4 @@ export const TrackContextProvider = ({ children }: { children: React.ReactNode }
     )
 };
 
-export const useCourseContext = () => useContext(TrackContext);
+export const useTrackContext = () => useContext(TrackContext);

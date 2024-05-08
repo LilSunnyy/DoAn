@@ -1,13 +1,29 @@
 'use client'
+import { useTrackContext } from "@/lib/track.wrapper";
 import { useHasMounted } from "@/utils/customHook";
 import { Container } from "@mui/material";
 import AppBar from "@mui/material/AppBar";
+import { useContext, useEffect, useRef } from "react";
 import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
+import MediaControlCard from "./media.card";
 
 const AppFooter = () => {
     const hasMounted = useHasMounted();
-    if (!hasMounted) return (<></>)
+    const playerRef = useRef(null)
+    const { currentTrack, setCurrentTrack } = useTrackContext() as ITrackContext;
+
+    useEffect(() => {
+        if (currentTrack?.isPlaying) {
+            //@ts-ignore
+            playerRef?.current?.audio?.current.play()
+        } else {
+            //@ts-ignore
+            playerRef?.current?.audio?.current.pause()
+        }
+    }, [currentTrack])
+
+    if (!hasMounted) return (<></>);
 
     return (
         <div style={{ marginTop: 100 }}>
@@ -21,13 +37,18 @@ const AppFooter = () => {
                     ".rhap_main": { gap: "30px" },
                     ".rhap_progress-indicator": { background: "orange", width: "10px" },
                     ".rhap_progress-filled": { backgroundColor: "orange" },
-                    "#rhap_current-time": { color: "orange" }
+                    "#rhap_current-time": { color: "orange" },
                 }}>
                     <AudioPlayer
+                        ref={playerRef}
                         layout="horizontal-reverse"
-                        autoPlay={false}
-                        src="http://localhost:8000/static/song/2024/03/Sau_C%C6%A1n_M%C6%B0a_-_CoolKid_ft_Rhyder.mp3"
-                        onPlay={() => { }}
+                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL_IMAGE}${currentTrack.url}`}
+                        onPlay={() => {
+                            setCurrentTrack({ ...currentTrack, isPlaying: true });
+                        }}
+                        onPause={() => {
+                            setCurrentTrack({ ...currentTrack, isPlaying: false });
+                        }}
                         style={{
                             boxShadow: "unset",
                             background: "#f2f2f2"
@@ -38,10 +59,10 @@ const AppFooter = () => {
                         flexDirection: "column",
                         alignItems: "start",
                         justifyContent: "center",
+                        width: '17rem',
                         minWidth: 100
                     }}>
-                        <div style={{ color: "#ccc" }}>Dat</div>
-                        <div style={{ color: "black" }}>yeah</div>
+                        <MediaControlCard track={currentTrack} />
                     </div>
                 </Container>
             </AppBar>

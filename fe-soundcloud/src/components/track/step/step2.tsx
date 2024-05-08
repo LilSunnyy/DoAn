@@ -25,7 +25,12 @@ import { useToast } from "@/utils/toast";
 function LinearProgressWithLabel(props: LinearProgressProps & { value: number }) {
     return (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Box sx={{ width: '100%', mr: 1 }}>
+            <Box sx={{
+                width: '100%',
+                mr: 1,
+                '.mui-5xe99f-MuiLinearProgress-bar1': { backgroundColor: "orange" },
+                '.mui-eglki6-MuiLinearProgress-root': { backgroundColor: "gray" }
+            }}>
                 <LinearProgress variant="determinate" {...props} />
             </Box>
             <Box sx={{ minWidth: 35 }}>
@@ -97,7 +102,6 @@ const Step2 = (props: IProps) => {
         url: ""
     });
 
-    console.log("props:", genres)
     const [error, setError] = useState({
         title: {
             error: false,
@@ -139,6 +143,12 @@ const Step2 = (props: IProps) => {
             <Button
                 component="label"
                 variant="contained"
+                sx={{
+                    background: 'rgb(255, 85, 0)',
+                    '&:hover': {
+                        background: 'rgb(255, 50, 0)',
+                    },
+                }}
                 startIcon={<CloudUploadIcon />}
             >
                 Upload file

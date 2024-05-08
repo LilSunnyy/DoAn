@@ -29,6 +29,7 @@ declare global {
         title:string;
         url: string;
         like:number;
+        view:number;
     }
 
     interface IRequest {
@@ -58,8 +59,12 @@ declare global {
         result: T[]
     }
 
+    interface IShareTrack extends ITrack{
+        isPlaying : boolean;
+    }
+
     interface ITrackContext{
-        currentTrack: ITrack;
-        setCurrentTrack: (track: ITrack) => void;
+        currentTrack: IShareTrack;
+        setCurrentTrack: (track: IShareTrack) => void;
     }
 }

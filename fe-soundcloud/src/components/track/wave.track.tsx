@@ -9,9 +9,11 @@ import PauseIcon from '@mui/icons-material/Pause';
 import './wave.scss'
 import { calLeft } from "@/utils/utils";
 import { Tooltip } from "@mui/material";
+import { useTrackContext } from "@/lib/track.wrapper";
 
-interface ISlug {
+interface IProps {
     id: string;
+    track: ITrack;
 }
 
 const formatTime = (seconds: number) => {
@@ -22,11 +24,15 @@ const formatTime = (seconds: number) => {
 }
 
 
-const WaveTrack = (slug: ISlug) => {
+const WaveTrack = (props: IProps) => {
+    const { track, id } = props;
     const containerRef = useRef<HTMLInputElement>(null);
     const timeRef = useRef<HTMLInputElement>(null);
     const durationRef = useRef<HTMLInputElement>(null);
     const hoverRef = useRef<HTMLInputElement>(null);
+    const { currentTrack, setCurrentTrack } = useTrackContext() as ITrackContext;
+    const [isPlaying, setIsPlaying] = useState<boolean>(false);
+    console.log(currentTrack)
 
     const options: Omit<WaveSurferOptions, 'container'> & { container: RefObject<HTMLElement>; } = useMemo(() => {
         if (typeof document === 'undefined') {
@@ -66,7 +72,7 @@ const WaveTrack = (slug: ISlug) => {
             height: 100,
             waveColor: gradient,
             progressColor: progressGradient,
-            url: `/api?audio=${slug.id}`,
+            url: `/api?audio=${id}`,
             barWidth: 3,
             renderFunction: (peaks: Array<Float32Array | number[]>, ctx: CanvasRenderingContext2D) => {
                 const { width, height } = ctx.canvas;
@@ -131,10 +137,34 @@ const WaveTrack = (slug: ISlug) => {
         waveform.addEventListener('pointermove', (e) => (hover.style.width = `${e.offsetX}px`))
     }
 
-    const { wavesurfer, isPlaying, currentTime, isReady } = useWavesurfer(options)
+    const { wavesurfer, currentTime, isReady } = useWavesurfer(options)
+
+    useEffect(() => {
+        if (!wavesurfer) return;
+        setIsPlaying(false);
+
+        const hover = hoverRef.current!;
+        const waveform = containerRef.current!;
+        waveform.addEventListener('pointermove', (e) => (hover.style.width = `${e.offsetX}px`))
+
+        const subscriptions = [
+            wavesurfer.on('play', () => setIsPlaying(true)),
+            wavesurfer.on('pause', () => setIsPlaying(false)),
+            wavesurfer.once('interaction', () => {
+                wavesurfer.play()
+            })
+        ]
+
+        return () => {
+            subscriptions.forEach((unsub) => unsub())
+        }
+    }, [wavesurfer])
+
 
     const onPlayClick = useCallback(() => {
-        wavesurfer && wavesurfer.playPause()
+        if (wavesurfer) {
+            wavesurfer.isPlaying() ? wavesurfer.pause() : wavesurfer.play();
+        }
     }, [wavesurfer]);
 
     if (typeof document !== 'undefined') {
@@ -168,123 +198,141 @@ const WaveTrack = (slug: ISlug) => {
         },
     ]
 
+    useEffect(() => {
+        if (wavesurfer && currentTrack.isPlaying) {
+            wavesurfer.pause();
+        }
+    }, [currentTrack])
+
+    useEffect(() => {
+        if (track?.id && !currentTrack?.id)
+            setCurrentTrack({ ...track, isPlaying: false })
+    }, [track])
 
     return (
-        <div style={{ marginTop: 20 }}>
-            <div
-                style={{
-                    display: "flex",
-                    gap: 15,
-                    padding: 20,
-                    height: 400,
-                    background: "linear-gradient(135deg, rgb(106, 112, 67) 0%, rgb(11, 15, 20) 100%)"
-                }}
-            >
-                <div className="left"
+        track !== undefined ? (
+            <div style={{ marginTop: 20 }}>
+                <div
                     style={{
-                        width: "75%",
-                        height: "calc(100% - 10px)",
                         display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between"
+                        gap: 15,
+                        padding: 20,
+                        height: 400,
+                        background: "linear-gradient(135deg, rgb(106, 112, 67) 0%, rgb(11, 15, 20) 100%)"
                     }}
                 >
-                    <div className="info" style={{ display: "flex" }}>
-                        <div>
-                            <div
-                                onClick={() => onPlayClick()}
-                                style={{
-                                    borderRadius: "50%",
-                                    background: "#f50",
-                                    height: "50px",
-                                    width: "50px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    cursor: "pointer"
+                    <div className="left"
+                        style={{
+                            width: "75%",
+                            height: "calc(100% - 10px)",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between"
+                        }}
+                    >
+                        <div className="info" style={{ display: "flex" }}>
+                            <div>
+                                <div
+                                    onClick={() => {
+                                        onPlayClick();
+                                        if (track && wavesurfer) {
+                                            setCurrentTrack({ ...currentTrack, isPlaying: false })
+                                        }
+                                    }}
+                                    style={{
+                                        borderRadius: "50%",
+                                        background: "#f50",
+                                        height: "50px",
+                                        width: "50px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        cursor: "pointer"
+                                    }}
+                                >
+                                    {isPlaying === true ?
+                                        <PauseIcon
+                                            sx={{ fontSize: 30, color: "white" }}
+                                        />
+                                        :
+                                        <PlayArrowIcon
+                                            sx={{ fontSize: 30, color: "white" }}
+                                        />
+                                    }
+                                </div>
+                            </div>
+                            <div style={{ marginLeft: 20 }}>
+                                <div style={{
+                                    maxWidth: "35rem",
+                                    padding: "0 5px",
+                                    background: "#333",
+                                    fontSize: 25,
+                                    width: "fit-content",
+                                    color: "white"
+                                }}>
+                                    {track.title}
+                                </div>
+                                <div style={{
+                                    padding: "0 5px",
+                                    marginTop: 10,
+                                    background: "#333",
+                                    fontSize: 20,
+                                    width: "fit-content",
+                                    color: "white"
                                 }}
-                            >
-                                {isPlaying === true ?
-                                    <PauseIcon
-                                        sx={{ fontSize: 30, color: "white" }}
-                                    />
-                                    :
-                                    <PlayArrowIcon
-                                        sx={{ fontSize: 30, color: "white" }}
-                                    />
+                                >
+                                    {track.fk_user.username}
+                                </div>
+                            </div>
+                        </div>
+                        <div ref={containerRef} className="wave-form">
+                            <div className={`${isReady && 'time'}`} ref={timeRef}>{isReady && "0:00"}</div>
+                            <div className={`${isReady && 'duration'}`} ref={durationRef}>{wavesurfer && ""}</div>
+                            <div className={`${isReady && 'hover-wave'}`} ref={hoverRef}></div>
+                            <div className={`${isReady && 'comments'}`}>
+                                {
+                                    isReady && arrComments.map((comment) => {
+                                        return (
+                                            <Tooltip key={`id=${comment.id}`} title={comment.content} arrow>
+                                                <img
+                                                    className={`${isReady && 'img-comments'}`}
+                                                    onPointerMove={(e) => {
+                                                        const hover = hoverRef.current;
+                                                        hover ? hover.style.width = calLeft(comment.moment + 3) : null;
+                                                    }}
+                                                    key={`id_img=${comment.id}`}
+                                                    src={comment.avatar}
+                                                    alt="sa"
+                                                    style={{
+                                                        left: calLeft(comment.moment)
+                                                    }} />
+                                            </Tooltip>
+
+                                        )
+                                    })
                                 }
                             </div>
-                        </div>
-                        <div style={{ marginLeft: 20 }}>
-                            <div style={{
-                                padding: "0 5px",
-                                background: "#333",
-                                fontSize: 30,
-                                width: "fit-content",
-                                color: "white"
-                            }}>
-                                Dieu Xuan
-                            </div>
-                            <div style={{
-                                padding: "0 5px",
-                                marginTop: 10,
-                                background: "#333",
-                                fontSize: 20,
-                                width: "fit-content",
-                                color: "white"
-                            }}
-                            >
-                                Xuan
-                            </div>
+                            <div className={`${isReady && 'overlay-wave'}`}></div>
                         </div>
                     </div>
-                    <div ref={containerRef} className="wave-form">
-                        <div className={`${isReady && 'time'}`} ref={timeRef}>{isReady && "00:00"}</div>
-                        <div className={`${isReady && 'duration'}`} ref={durationRef}>{wavesurfer && ""}</div>
-                        <div className={`${isReady && 'hover-wave'}`} ref={hoverRef}></div>
-                        <div className={`${isReady && 'comments'}`}>
-                            {
-                                isReady && arrComments.map((comment) => {
-                                    return (
-                                        <Tooltip title={comment.content} arrow>
-                                            <img
-                                                className={`${isReady && 'img-comments'}`}
-                                                onPointerMove={(e) => {
-                                                    const hover = hoverRef.current;
-                                                    hover ? hover.style.width = calLeft(comment.moment + 3) : null;
-                                                }}
-                                                key={comment.id}
-                                                src={comment.avatar}
-                                                alt="sa"
-                                                style={{
-                                                    left: calLeft(comment.moment)
-                                                }} />
-                                        </Tooltip>
-
-                                    )
-                                })
-                            }
+                    <div className="right"
+                        style={{
+                            width: "25%",
+                            padding: 15,
+                            display: "flex",
+                            alignItems: "center"
+                        }}
+                    >
+                        <div style={{
+                            background: "#ccc",
+                            width: 250,
+                            height: 250
+                        }}>
                         </div>
-                        <div className={`${isReady && 'overlay-wave'}`}></div>
                     </div>
                 </div>
-                <div className="right"
-                    style={{
-                        width: "25%",
-                        padding: 15,
-                        display: "flex",
-                        alignItems: "center"
-                    }}
-                >
-                    <div style={{
-                        background: "#ccc",
-                        width: 250,
-                        height: 250
-                    }}>
-                    </div>
-                </div>
-            </div>
-        </div >
+            </div >) :
+            (<h1>Page not found</h1>)
     )
 }
 
