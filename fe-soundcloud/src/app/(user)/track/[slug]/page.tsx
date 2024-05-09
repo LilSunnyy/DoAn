@@ -3,7 +3,7 @@ import { CardMedia, Container, Grid } from "@mui/material";
 import { getIdFromUrl, sendRequest } from '@/utils/api';
 import Divider from '@mui/material/Divider';
 import { Box } from "@mui/material";
-import WaveTrackHeader from "@/components/track/wave.track";
+import WaveTrack from "@/components/track/wave.track";
 
 
 const DetailTrackPage = async ({ params }: { params: { slug: string } }) => {
@@ -13,9 +13,19 @@ const DetailTrackPage = async ({ params }: { params: { slug: string } }) => {
         method: "GET",
     })
 
+    const resComments = await sendRequest<IBackendRes<IComment[]>>({
+        url: `http://localhost:8000/comment/${id}/track-comments/`,
+        method: "GET",
+    })
+
     return (
         <Container>
-            {res.results && (<WaveTrackHeader id={id} track={res.results} />)}
+            {res.results && (
+                <WaveTrack
+                    id={id}
+                    track={res.results}
+                    comments={resComments.results?.reverse() ?? []} />
+            )}
         </Container>
     )
 }

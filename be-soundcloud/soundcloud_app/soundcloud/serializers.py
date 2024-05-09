@@ -92,6 +92,14 @@ class PlaylistTracksSerializer(ModelSerializer):
         fields = '__all__'
 
 class CommentSerializer(ModelSerializer):
+    fk_user = SerializerMethodField()
+
+    def get_fk_user(self, comment):
+        user = comment.fk_user
+        if user:
+            return UserSerializer(user).data
+        return None
+
     class Meta:
         model = Comment
         fields = '__all__'

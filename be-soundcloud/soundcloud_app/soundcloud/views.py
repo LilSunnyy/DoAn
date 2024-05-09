@@ -340,27 +340,6 @@ class TracksViewSet(viewsets.ViewSet,
             }
             return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
 
-    @action(methods=['get'], detail=True, url_path='comments')
-    def get_comments(self, request, pk):
-        try:
-            track = Tracks.objects.get(pk=pk)
-            comments = Comment.objects.filter(fk_tracks=track)
-            serializer = CommentSerializer(comments, many=True)
-            response_data = {
-                'error': None,
-                'message': 'Thành công',
-                'statusCode': status.HTTP_200_OK,
-                'results': serializer.data,
-            }
-            return Response(data=response_data, status=status.HTTP_200_OK)
-        except Tracks.DoesNotExist:
-            response_data = {
-                'error': 'Bài hát không tồn tại',
-                'statusCode': status.HTTP_404_NOT_FOUND,
-                'results': serializer.data,
-            }
-            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
-
 class GenreViewSet(viewsets.ViewSet,
                   generics.RetrieveAPIView,
                     generics.ListAPIView):
@@ -485,10 +464,41 @@ class PlaylistTracksViewSet(
 class CommentViewSet(
                     viewsets.ViewSet,
                     generics.RetrieveAPIView,
-                    generics.ListAPIView):
-    queryset = Comment.objects.filter(is_active = True)
+                    generics.ListAPIView,
+                    generics.CreateAPIView):
+    queryset = Comment.objects.filter(is_active = True).order_by('-created_date')
     serializer_class = CommentSerializer
     pagination_class = Pagination
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.IsAuthenticated()]
+        else:
+            return [permissions.AllowAny()]
+
+    def create(self, request, *args, **kwargs):
+        try:
+            user = request.user
+
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(fk_user=user)
+
+            response_data = {
+                'error': None,
+                'message': 'Comment created successfully',
+                'statusCode': status.HTTP_201_CREATED,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            response_data = {
+                'error': str(e),
+                'message': 'Error creating comment',
+                'statusCode': status.HTTP_400_BAD_REQUEST,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -510,6 +520,27 @@ class CommentViewSet(
             }
             return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
 
+    @action(methods=['get'], detail=True, url_path='track-comments')
+    def get_comments(self, request, pk):
+        try:
+            track = Tracks.objects.get(pk=pk)
+            comments = Comment.objects.filter(fk_tracks=track)
+            serializer = CommentSerializer(comments, many=True)
+            response_data = {
+                'error': None,
+                'message': 'Thành công',
+                'statusCode': status.HTTP_200_OK,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+        except Tracks.DoesNotExist:
+            response_data = {
+                'error': 'Bài hát không tồn tại',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+
     @action(methods=['post'], detail=True,
             url_path="hide-comment",
             url_name="hide-comment")
@@ -526,10 +557,61 @@ class CommentViewSet(
 class LikeViewSet(
                     viewsets.ViewSet,
                     generics.RetrieveAPIView,
-                    generics.ListAPIView):
+                    generics.ListAPIView,
+                    generics.CreateAPIView):
     queryset = Like.objects.filter(is_active = True)
     serializer_class = CommentSerializer
     pagination_class = Pagination
+    def get_permissions(self):
+        if self.action == 'create'or self.action == 'retrieve':
+            return [permissions.IsAuthenticated()]
+        else:
+            return [permissions.AllowAny()]
+
+    def create(self, request, *args, **kwargs):
+        try:
+            user = request.user
+            track_id = request.data.get('fk_tracks')
+            like_value = request.data.get('like', False)
+
+            if not track_id:
+                raise ValueError("No track ID provided.")
+
+            track = Tracks.objects.get(id=track_id)
+
+            # Kiểm tra xem người dùng đã thích bài hát này chưa
+            already_liked = Like.objects.filter(fk_user=user, fk_tracks=track).exists()
+
+            # Nếu người dùng đã thích, cập nhật lại giá trị like của bài hát
+            if already_liked:
+                if like_value:  # Nếu giá trị like gửi lên là True
+                    track.like += 1  # Tăng giá trị like
+                else:
+                    track.like -= 1  # Giảm giá trị like
+                track.save()  # Lưu lại thay đổi
+
+            # Lưu thông tin về like mới
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(fk_user=user)
+            trackAfterSave = Tracks.objects.get(id=track_id)
+            serializerResponse = TracksSerializer(trackAfterSave)
+
+            response_data = {
+                'error': None,
+                'message': 'Liked successfully',
+                'statusCode': status.HTTP_201_CREATED,
+                'results': serializerResponse.data,
+            }
+            return Response(data=response_data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            response_data = {
+                'error': str(e),
+                'message': 'Like error',
+                'statusCode': status.HTTP_400_BAD_REQUEST,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
     def retrieve(self, request, *args, **kwargs):
         try:

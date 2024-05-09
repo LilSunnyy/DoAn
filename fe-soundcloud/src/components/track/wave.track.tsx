@@ -10,10 +10,13 @@ import './wave.scss'
 import { calLeft } from "@/utils/utils";
 import { Tooltip } from "@mui/material";
 import { useTrackContext } from "@/lib/track.wrapper";
+import CommentTrack from "./comment.track";
+import LikeTrack from "./like.track";
 
 interface IProps {
     id: string;
     track: ITrack;
+    comments: IComment[];
 }
 
 const formatTime = (seconds: number) => {
@@ -25,14 +28,13 @@ const formatTime = (seconds: number) => {
 
 
 const WaveTrack = (props: IProps) => {
-    const { track, id } = props;
+    const { track, id, comments } = props;
     const containerRef = useRef<HTMLInputElement>(null);
     const timeRef = useRef<HTMLInputElement>(null);
     const durationRef = useRef<HTMLInputElement>(null);
     const hoverRef = useRef<HTMLInputElement>(null);
     const { currentTrack, setCurrentTrack } = useTrackContext() as ITrackContext;
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
-    console.log(currentTrack)
 
     const options: Omit<WaveSurferOptions, 'container'> & { container: RefObject<HTMLElement>; } = useMemo(() => {
         if (typeof document === 'undefined') {
@@ -131,12 +133,6 @@ const WaveTrack = (props: IProps) => {
         };
     }, []);
 
-    if (containerRef.current !== null && hoverRef.current !== null) {
-        const hover = hoverRef.current!
-        const waveform = containerRef.current!
-        waveform.addEventListener('pointermove', (e) => (hover.style.width = `${e.offsetX}px`))
-    }
-
     const { wavesurfer, currentTime, isReady } = useWavesurfer(options)
 
     useEffect(() => {
@@ -173,30 +169,6 @@ const WaveTrack = (props: IProps) => {
         wavesurfer && wavesurfer.on('decode', (duration) => (durationEl.textContent = formatTime(duration)))
         wavesurfer && wavesurfer.on('timeupdate', (currentTime) => (timeEl.textContent = formatTime(currentTime)))
     }
-
-    const arrComments = [
-        {
-            id: 1,
-            avatar: `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/photos/2024/04/Screenshot_Capture_-_2024-04-23_-_21-14-07.png`,
-            moment: 10,
-            user: "username 1",
-            content: "just a comment1"
-        },
-        {
-            id: 2,
-            avatar: `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/photos/2024/04/Screenshot_Capture_-_2024-04-23_-_21-14-07.png`,
-            moment: 30,
-            user: "username 2",
-            content: "just a comment3"
-        },
-        {
-            id: 3,
-            avatar: `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/photos/2024/04/Screenshot_Capture_-_2024-04-23_-_21-14-07.png`,
-            moment: 50,
-            user: "username 3",
-            content: "just a comment3"
-        },
-    ]
 
     useEffect(() => {
         if (wavesurfer && currentTrack.isPlaying) {
@@ -291,9 +263,9 @@ const WaveTrack = (props: IProps) => {
                             <div className={`${isReady && 'hover-wave'}`} ref={hoverRef}></div>
                             <div className={`${isReady && 'comments'}`}>
                                 {
-                                    isReady && arrComments.map((comment) => {
+                                    isReady && comments.map((comment) => {
                                         return (
-                                            <Tooltip key={`id=${comment.id}`} title={comment.content} arrow>
+                                            <Tooltip key={`id=${comment.id}`} title={comment.comment_text} arrow>
                                                 <img
                                                     className={`${isReady && 'img-comments'}`}
                                                     onPointerMove={(e) => {
@@ -301,7 +273,9 @@ const WaveTrack = (props: IProps) => {
                                                         hover ? hover.style.width = calLeft(comment.moment + 3) : null;
                                                     }}
                                                     key={`id_img=${comment.id}`}
-                                                    src={comment.avatar}
+                                                    src={comment.fk_user.avatar !== '' && comment.fk_user.avatar !== null ?
+                                                        `${process.env.NEXT_PUBLIC_BACKEND_URL}${comment.fk_user.avatar}` :
+                                                        "/avatars-000184820148-9xr49w-t240x240.jpg"}
                                                     alt="sa"
                                                     style={{
                                                         left: calLeft(comment.moment)
@@ -323,14 +297,24 @@ const WaveTrack = (props: IProps) => {
                             alignItems: "center"
                         }}
                     >
-                        <div style={{
-                            background: "#ccc",
-                            width: 250,
-                            height: 250
-                        }}>
-                        </div>
+                        {
+                            track?.photo ? (<img
+                                src={`${process.env.NEXT_PUBLIC_BACKEND_URL}/static/${track?.photo}`}
+                                width={230}
+                                height={230}
+                                alt={"track"}
+                            />
+                            ) : <div style={{
+                                background: "#ccc",
+                                width: 250,
+                                height: 250
+                            }}>
+                            </div>
+                        }
                     </div>
                 </div>
+                <LikeTrack track={track} />
+                <CommentTrack comments={comments} track={track} wavesurfer={wavesurfer} />
             </div >) :
             (<h1>Page not found</h1>)
     )

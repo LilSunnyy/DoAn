@@ -222,13 +222,18 @@ export default function AppHeader() {
                             }
                         }}>
                             {
-                                session ? <>
-                                    <Link href={"/playlists"}>PlayLists</Link>
-                                    <Link href={"/likes"}>Likes</Link>
-                                    <Link href={"/track/upload"}>Upload</Link>
-                                    <Avatar
-                                        onClick={handleProfileMenuOpen}>H</Avatar>
-                                </> :
+                                session ?
+                                    <>
+                                        <Link href={"/playlists"}>PlayLists</Link>
+                                        <Link href={"/likes"}>Likes</Link>
+                                        <Link href={"/track/upload"}>Upload</Link>
+                                        <img
+                                            src={session?.user?.avatar !== "" && session?.user?.avatar !== null ?
+                                                `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/${session?.user?.avatar}` :
+                                                "/avatars-000184820148-9xr49w-t240x240.jpg"}
+                                            onClick={handleProfileMenuOpen}
+                                            style={{ width: 40, height: 40, borderRadius: "50%" }} />
+                                    </> :
                                     <Link href={"auth/signin"}>Login</Link>
                             }
 

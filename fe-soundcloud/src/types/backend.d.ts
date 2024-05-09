@@ -32,6 +32,20 @@ declare global {
         view:number;
     }
 
+    interface IComment extends Itembase{
+        comment_text: string;
+        moment: number;
+        fk_user: IUser;
+        fk_tracks: ITrack;
+        created_date: string;
+    }
+
+    interface ILike extends Itembase{
+        like: boolean;
+        fk_user: IUser;
+        fk_tracks: ITrack;
+    }
+
     interface IRequest {
         url: string;
         method: string;
@@ -48,6 +62,7 @@ declare global {
         statusCode: number | string;
         results?: T;
     }
+
 
     interface IModelPaginate<T> {
         meta: {
