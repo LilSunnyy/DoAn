@@ -105,6 +105,21 @@ class CommentSerializer(ModelSerializer):
         fields = '__all__'
 
 class LikeSerializer(ModelSerializer):
+    fk_user = SerializerMethodField()
+    fk_tracks = SerializerMethodField()
+
+    def get_fk_user(self, like):
+        user = like.fk_user
+        if user:
+            return UserSerializer(user).data
+        return None
+
+    def get_fk_tracks(self, like):
+        track = like.fk_tracks
+        if track:
+            return TracksSerializer(track).data
+        return None
+
     class Meta:
         model = Like
         fields = '__all__'

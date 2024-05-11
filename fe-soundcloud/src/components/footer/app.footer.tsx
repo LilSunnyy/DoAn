@@ -8,6 +8,14 @@ import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
 import MediaControlCard from "./media.card";
 
+function constructUrl(track: ITrack): string {
+    if (track.url.startsWith("/")) {
+        return `${process.env.NEXT_PUBLIC_BACKEND_URL}/static${track.url}`;
+    } else {
+        return `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/${track.url}`;
+    }
+}
+
 const AppFooter = () => {
     const hasMounted = useHasMounted();
     const playerRef = useRef(null)
@@ -28,7 +36,7 @@ const AppFooter = () => {
     return (
         <>
             {
-                currentTrack.id && (
+                currentTrack.id !== 0 && (
                     <div style={{ marginTop: 100 }}>
                         <AppBar
                             position="fixed"
@@ -45,7 +53,7 @@ const AppFooter = () => {
                                 <AudioPlayer
                                     ref={playerRef}
                                     layout="horizontal-reverse"
-                                    src={`${process.env.NEXT_PUBLIC_BACKEND_URL_IMAGE}${currentTrack.url}`}
+                                    src={constructUrl(currentTrack)}
                                     onPlay={() => {
                                         setCurrentTrack({ ...currentTrack, isPlaying: true });
                                     }}

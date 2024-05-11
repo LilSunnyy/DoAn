@@ -11,13 +11,13 @@ export default async function HomePage() {
   const session = await getServerSession(authOptions);
 
   const resPop = await sendRequest<IBackendRes<ITrack[]>>({
-    url: "http://localhost:8000/tracks/top/",
+    url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/tracks/top/`,
     method: "POST",
     body: { genre: "pop" }
   })
 
   const resChill = await sendRequest<IBackendRes<ITrack[]>>({
-    url: "http://localhost:8000/tracks/top/",
+    url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/tracks/top/`,
     method: "POST",
     body: { genre: "chill" }
   })

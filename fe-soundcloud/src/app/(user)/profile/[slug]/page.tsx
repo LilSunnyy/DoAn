@@ -4,9 +4,12 @@ import { Container, Grid } from "@mui/material";
 
 const ProfilePage = async ({ params }: { params: { slug: string } }) => {
     const res = await sendRequest<IBackendRes<ITrack[]>>({
-        url: "http://localhost:8000/tracks/user/",
+        url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/tracks/user/`,
         method: "post",
-        body: { user_id: `${params.slug}` }
+        body: { user_id: `${params.slug}` },
+        nextOption: {
+            next: { tags: ['track-by-profile'] }
+        }
     })
 
     const data = res?.results ?? []

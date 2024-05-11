@@ -46,6 +46,14 @@ declare global {
         fk_tracks: ITrack;
     }
 
+    interface IPlaylist extends Itembase{
+        title: string;
+        description: string;
+        status: boolean;
+        tracks: ITrack[];
+        fk_user: IUser;
+    }
+
     interface IRequest {
         url: string;
         method: string;

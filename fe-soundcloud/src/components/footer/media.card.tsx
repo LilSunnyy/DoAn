@@ -15,6 +15,14 @@ interface IProp {
     track: ITrack;
 }
 
+function constructPhotoUrl(track: ITrack): string {
+    if (track.photo.startsWith("/")) {
+        return `${process.env.NEXT_PUBLIC_BACKEND_URL}/static${track.photo}`;
+    } else {
+        return `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/${track.photo}`;
+    }
+}
+
 export default function MediaControlCard(props: IProp) {
     const { track } = props;
     const theme = useTheme();
@@ -25,7 +33,7 @@ export default function MediaControlCard(props: IProp) {
                 <Box sx={{ display: 'flex', alignItems: 'center', marginRight: '8px', width: '15%' }}>
                     <Image
                         style={{ alignSelf: 'center' }}
-                        src={`http://127.0.0.1:8000/static/${track.photo}`}
+                        src={constructPhotoUrl(track)}
                         alt=""
                         width={30}
                         height={30}

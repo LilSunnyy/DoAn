@@ -12,6 +12,7 @@ const HeadBanner = () => {
                 height="0"
                 sizes="100vw"
                 className="imageBanner"
+                priority={true}
             />
             <div className="overlay">
                 <h2>Kết nối trên SoundCloud</h2>

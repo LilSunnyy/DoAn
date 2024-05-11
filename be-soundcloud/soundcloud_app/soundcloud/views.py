@@ -1,5 +1,7 @@
 import mimetypes
 
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from django.db.models import Q
 from rest_framework import viewsets, permissions, generics,status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
@@ -25,7 +27,7 @@ import time
 from rest_framework.exceptions import ValidationError
 
 class Pagination(PageNumberPagination):
-    page_size = 5
+    page_size = 20
 
 class CustomTokenView(TokenView):
     @method_decorator(sensitive_post_parameters("password"))
@@ -54,6 +56,11 @@ class CustomTokenView(TokenView):
 
 class GithubLogin(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
+    callback_url = "http://127.0.0.1:3000/"
+    client_class = OAuth2Client
+
+class GoogleLogin(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
     callback_url = "http://127.0.0.1:3000/"
     client_class = OAuth2Client
 
@@ -155,10 +162,79 @@ class TracksViewSet(viewsets.ViewSet,
     lookup_field = 'id'
 
     def get_permissions(self):
-        if self.action == 'create':
+        if self.action == 'create' or self.action == 'increase_view':
             return [permissions.IsAuthenticated()]
         else:
             return [permissions.AllowAny()]
+
+    @action(detail=False, methods=['post'], url_path='search')
+    def search(self, request):
+        try:
+            keyword = request.data.get('keyword')
+            if not keyword:
+                return Response({'error': 'Missing keyword'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Tìm các bài track có title hoặc description hoặc username hoặc genre gần giống với keyword
+            tracks = Tracks.objects.filter(
+                Q(title__icontains=keyword) |
+                Q(description__icontains=keyword) |
+                Q(fk_user__username__icontains=keyword) |
+                Q(fk_genre__name__icontains=keyword)
+            )
+
+            serializer = TracksSerializer(tracks, many=True, context={'request': request})
+            response_data = {
+                'error': None,
+                'message': 'Search results retrieved successfully',
+                'statusCode': status.HTTP_200_OK,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            response_data = {
+                'error': str(e),
+                'message': 'Error searching tracks',
+                'statusCode': status.HTTP_400_BAD_REQUEST,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='increase-view')
+    def increase_view(self, request):
+        try:
+            track_id = request.data.get('track_id')
+            if not track_id:
+                return Response({'error': 'Missing track_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+            track = Tracks.objects.get(id=track_id)
+            track.view += 1
+            track.save()
+
+            serializer = TracksSerializer(track, context={'request': request})
+            response_data = {
+                'error': None,
+                'message': 'View increased successfully',
+                'statusCode': status.HTTP_200_OK,
+                'results': serializer.data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+        except Tracks.DoesNotExist:
+            response_data = {
+                'error': 'Track not found',
+                'message': 'Track not found',
+                'statusCode': status.HTTP_404_NOT_FOUND,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            response_data = {
+                'error': str(e),
+                'message': 'Error increasing view',
+                'statusCode': status.HTTP_400_BAD_REQUEST,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'], url_path='user')
     def get_user_tracks(self, request):
@@ -381,31 +457,83 @@ class GenreViewSet(viewsets.ViewSet,
 
 class PlaylistViewSet(
                     viewsets.ViewSet,
-                    generics.RetrieveAPIView,
+                    generics.CreateAPIView,
                     generics.ListAPIView):
-    queryset = Playlist.objects.filter(is_active = True)
+    queryset = Playlist.objects.filter(is_active = True).order_by('-created_date')
     serializer_class = PlaylistSerializer
     pagination_class = Pagination
 
-    def retrieve(self, request, *args, **kwargs):
+    def get_permissions(self):
+        if self.action == 'create' or self.action == 'list':
+            return [permissions.IsAuthenticated()]
+        else:
+            return [permissions.AllowAny()]
+
+    def create(self, request, *args, **kwargs):
         try:
-            instance = self.get_object()
-            serializer = self.get_serializer(instance)
+            user = request.user
+
+            title = request.data.get('title')
+            description = request.data.get('description')
+            playlist_status = request.data.get('status')
+            if not title:
+                raise ValueError("Title is required.")
+
+            playlist = Playlist.objects.create(title=title, fk_user=user, description=description,
+                                               status=playlist_status)
+
+            serializer = self.serializer_class(playlist)
+
             response_data = {
                 'error': None,
-                'message': 'Success',
-                'statusCode': status.HTTP_200_OK,
+                'message': 'Playlist created successfully',
+                'statusCode': status.HTTP_201_CREATED,
                 'results': serializer.data,
             }
-            return Response(data=response_data, status=status.HTTP_200_OK)
-        except Playlist.DoesNotExist:
+            return Response(data=response_data, status=status.HTTP_201_CREATED)
+        except Exception as e:
             response_data = {
-                'error': 'Không tìm thấy.',
-                'message': 'Không tìm thấy.',
-                'statusCode': status.HTTP_404_NOT_FOUND,
+                'error': str(e),
+                'message': 'Error creating playlist',
+                'statusCode': status.HTTP_400_BAD_REQUEST,
                 'results': None,
             }
-            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+
+    def list(self, request):
+        try:
+            user = request.user
+            playlists = Playlist.objects.filter(fk_user=user)
+
+            playlist_data = []
+            for playlist in playlists:
+                playlist_serializer = self.serializer_class(playlist)
+                tracks = Tracks.objects.filter(playlisttracks_tracks__fk_playlist=playlist)
+                track_serializer = TracksSerializer(tracks, many=True)
+                playlist_data.append({
+                    'id': playlist.id,
+                    'status': playlist.status,
+                    'title': playlist.title,
+                    'description': playlist.description,
+                    'fk_user': playlist.fk_user_id,
+                    'tracks': track_serializer.data
+                })
+
+            response_data = {
+                'error': None,
+                'message': 'User playlists and tracks retrieved successfully',
+                'statusCode': status.HTTP_200_OK,
+                'results': playlist_data,
+            }
+            return Response(data=response_data, status=status.HTTP_200_OK)
+        except Exception as e:
+            response_data = {
+                'error': str(e),
+                'message': 'Error retrieving user playlists and tracks',
+                'statusCode': status.HTTP_400_BAD_REQUEST,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=True,
             url_path="hide-playlist",
@@ -422,31 +550,48 @@ class PlaylistViewSet(
 
 class PlaylistTracksViewSet(
                     viewsets.ViewSet,
-                    generics.RetrieveAPIView,
-                    generics.ListAPIView):
+                    generics.CreateAPIView):
     queryset = PlaylistTracks.objects.filter(is_active = True)
     serializer_class = PlaylistTracksSerializer
     pagination_class = Pagination
 
-    def retrieve(self, request, *args, **kwargs):
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.IsAuthenticated()]
+        else:
+            return [permissions.AllowAny()]
+
+    def create(self, request, *args, **kwargs):
         try:
-            instance = self.get_object()
-            serializer = self.get_serializer(instance)
+            user = request.user
+            playlist_id = request.data.get('id')
+            track_ids = request.data.get('tracks')
+
+            playlist = get_object_or_404(Playlist, id=playlist_id, fk_user=user)
+
+            # Lưu các track vào playlist nếu chưa tồn tại trong playlist
+            for track_id in track_ids:
+                track = get_object_or_404(Tracks, id=track_id)
+                # Kiểm tra xem track đã thuộc playlist chưa
+                if not PlaylistTracks.objects.filter(fk_playlist=playlist, fk_tracks=track).exists():
+                    PlaylistTracks.objects.create(fk_playlist=playlist, fk_tracks=track)
+
             response_data = {
                 'error': None,
-                'message': 'Success',
-                'statusCode': status.HTTP_200_OK,
-                'results': serializer.data,
-            }
-            return Response(data=response_data, status=status.HTTP_200_OK)
-        except PlaylistTracks.DoesNotExist:
-            response_data = {
-                'error': 'Không tìm thấy.',
-                'message': 'Không tìm thấy.',
-                'statusCode': status.HTTP_404_NOT_FOUND,
+                'message': 'Tracks added to playlist successfully',
+                'statusCode': status.HTTP_201_CREATED,
                 'results': None,
             }
-            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+            return Response(data=response_data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            response_data = {
+                'error': str(e),
+                'message': 'Error adding tracks to playlist',
+                'statusCode': status.HTTP_400_BAD_REQUEST,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=True,
             url_path="hide-playlisttracks",
@@ -556,14 +701,14 @@ class CommentViewSet(
 
 class LikeViewSet(
                     viewsets.ViewSet,
-                    generics.RetrieveAPIView,
                     generics.ListAPIView,
                     generics.CreateAPIView):
     queryset = Like.objects.filter(is_active = True)
-    serializer_class = CommentSerializer
+    serializer_class = LikeSerializer
     pagination_class = Pagination
+
     def get_permissions(self):
-        if self.action == 'create'or self.action == 'retrieve':
+        if self.action == 'create' or self.action == 'liked_track' or self.action == 'list':
             return [permissions.IsAuthenticated()]
         else:
             return [permissions.AllowAny()]
@@ -579,31 +724,60 @@ class LikeViewSet(
 
             track = Tracks.objects.get(id=track_id)
 
-            # Kiểm tra xem người dùng đã thích bài hát này chưa
             already_liked = Like.objects.filter(fk_user=user, fk_tracks=track).exists()
 
-            # Nếu người dùng đã thích, cập nhật lại giá trị like của bài hát
             if already_liked:
-                if like_value:  # Nếu giá trị like gửi lên là True
-                    track.like += 1  # Tăng giá trị like
+                like_instance = self.get_queryset().get(fk_tracks=track, fk_user=user)
+                if like_instance.like != like_value:
+                    like_instance.like = like_value
+                    serializer = self.get_serializer(like_instance, data=request.data, partial=True)
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
+
+                    # Cập nhật giá trị like của bài hát
+                    if like_value:
+                        track.like += 1
+                    else:
+                        track.like -= 1
+                    track.save()
+
+                    response_data = {
+                        'error': None,
+                        'message': 'Like updated successfully',
+                        'statusCode': status.HTTP_201_CREATED,
+                        'results': serializer.data,
+                    }
+                    return Response(data=response_data, status=status.HTTP_201_CREATED)
                 else:
-                    track.like -= 1  # Giảm giá trị like
-                track.save()  # Lưu lại thay đổi
+                    # Giá trị like không thay đổi, không cần cập nhật
+                    response_data = {
+                        'error': None,
+                        'message': 'Like value unchanged',
+                        'statusCode': status.HTTP_200_OK,
+                        'results': None,
+                    }
+                    return Response(data=response_data, status=status.HTTP_200_OK)
+            else:
+                # Tạo mới đối tượng Like
+                serializer = self.get_serializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                serializer.save(fk_user=user, fk_tracks=track)
 
-            # Lưu thông tin về like mới
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save(fk_user=user)
-            trackAfterSave = Tracks.objects.get(id=track_id)
-            serializerResponse = TracksSerializer(trackAfterSave)
+                # Cập nhật giá trị like của bài hát
+                if like_value:
+                    track.like += 1
+                else:
+                    track.like -= 1
+                track.save()
 
-            response_data = {
-                'error': None,
-                'message': 'Liked successfully',
-                'statusCode': status.HTTP_201_CREATED,
-                'results': serializerResponse.data,
-            }
-            return Response(data=response_data, status=status.HTTP_201_CREATED)
+                response_data = {
+                    'error': None,
+                    'message': 'Liked successfully',
+                    'statusCode': status.HTTP_201_CREATED,
+                    'results': serializer.data,
+                }
+                return Response(data=response_data, status=status.HTTP_201_CREATED)
+
         except Exception as e:
             response_data = {
                 'error': str(e),
@@ -613,30 +787,83 @@ class LikeViewSet(
             }
             return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
-    def retrieve(self, request, *args, **kwargs):
+    @action(detail=False, methods=['post'], url_path='liked-track')
+    def liked_track(self, request):
         try:
-            instance = self.get_object()
-            serializer = self.get_serializer(instance)
+            user = request.user
+            track_id = request.data.get('fk_tracks')
+
+            if not track_id:
+                raise ValueError("No track ID provided.")
+
+            track = Tracks.objects.get(id=track_id)
+
+            # Kiểm tra xem người dùng đã like track này chưa
+            try:
+                like_instance = Like.objects.get(fk_user=user, fk_tracks=track)
+                serializer = self.get_serializer(like_instance)
+                response_data = {
+                    'error': None,
+                    'message': 'Liked track information',
+                    'statusCode': status.HTTP_200_OK,
+                    'results': serializer.data,
+                }
+                return Response(data=response_data, status=status.HTTP_200_OK)
+            except Like.DoesNotExist:
+                like_instance = Like(fk_tracks=track)
+                serializer = self.get_serializer(like_instance)
+                response_data = {
+                    'error': 'User has not liked this track yet',
+                    'message': 'User has not liked this track yet',
+                    'statusCode': status.HTTP_200_OK,
+                    'results': serializer.data,
+                }
+                return Response(data=response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            response_data = {
+                'error': str(e),
+                'message': 'Error checking liked track',
+                'statusCode': status.HTTP_400_BAD_REQUEST,
+                'results': None,
+            }
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+
+    def list(self, request):
+        try:
+            user = request.user
+
+            user_likes = Like.objects.filter(fk_user=user, like=True)
+
+            # Lấy fk_tracks của các like để tìm ra các bài track tương ứng
+            track_ids = [like.fk_tracks_id for like in user_likes]
+
+            # Lấy ra các bài track tương ứng
+            liked_tracks = Tracks.objects.filter(id__in=track_ids)
+
+            serializer = TracksSerializer(liked_tracks, many=True)
+
             response_data = {
                 'error': None,
-                'message': 'Success',
+                'message': 'User liked tracks retrieved successfully',
                 'statusCode': status.HTTP_200_OK,
                 'results': serializer.data,
             }
             return Response(data=response_data, status=status.HTTP_200_OK)
-        except Like.DoesNotExist:
+
+        except Exception as e:
             response_data = {
-                'error': 'Không tìm thấy.',
-                'message': 'Không tìm thấy.',
-                'statusCode': status.HTTP_404_NOT_FOUND,
+                'error': str(e),
+                'message': 'Error retrieving user liked tracks',
+                'statusCode': status.HTTP_400_BAD_REQUEST,
                 'results': None,
             }
-            return Response(data=response_data, status=status.HTTP_404_NOT_FOUND)
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=['post'], detail=True,
             url_path="hide-like",
             url_name="hide-like")
-    def hide_comment(self, request, pk):
+    def hide_like(self, request, pk):
         try:
             l = Like.objects.get(pk=pk)
             l.is_active = False

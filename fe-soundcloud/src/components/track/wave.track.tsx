@@ -12,6 +12,9 @@ import { Tooltip } from "@mui/material";
 import { useTrackContext } from "@/lib/track.wrapper";
 import CommentTrack from "./comment.track";
 import LikeTrack from "./like.track";
+import { useSession } from "next-auth/react";
+import { sendRequest } from "@/utils/api";
+import { useRouter } from "next/navigation";
 
 interface IProps {
     id: string;
@@ -28,6 +31,7 @@ const formatTime = (seconds: number) => {
 
 
 const WaveTrack = (props: IProps) => {
+    const router = useRouter();
     const { track, id, comments } = props;
     const containerRef = useRef<HTMLInputElement>(null);
     const timeRef = useRef<HTMLInputElement>(null);
@@ -35,6 +39,8 @@ const WaveTrack = (props: IProps) => {
     const hoverRef = useRef<HTMLInputElement>(null);
     const { currentTrack, setCurrentTrack } = useTrackContext() as ITrackContext;
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
+    const { data: session } = useSession();
+    const [firstTimeOnPage, setFirstTimeOnPage] = useState<boolean>(true)
 
     const options: Omit<WaveSurferOptions, 'container'> & { container: RefObject<HTMLElement>; } = useMemo(() => {
         if (typeof document === 'undefined') {
@@ -181,6 +187,32 @@ const WaveTrack = (props: IProps) => {
             setCurrentTrack({ ...track, isPlaying: false })
     }, [track])
 
+    const handleIncreaseView = async () => {
+        if (session?.access_token && firstTimeOnPage) {
+            const res = await sendRequest<IBackendRes<ITrack>>({
+                url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/tracks/increase-view/`,
+                method: "POST",
+                body: {
+                    track_id: track?.id,
+                },
+                headers: {
+                    Authorization: `Bearer ${session?.access_token}`,
+                },
+            })
+            if (res?.results) {
+                setFirstTimeOnPage(false);
+                await sendRequest<IBackendRes<any>>({
+                    url: `/api/revalidate`,
+                    method: "POST",
+                    queryParams: {
+                        tag: "track-by-id",
+                    }
+                })
+                router.refresh()
+            }
+        }
+    }
+
     return (
         track !== undefined ? (
             <div style={{ marginTop: 20 }}>
@@ -207,6 +239,7 @@ const WaveTrack = (props: IProps) => {
                                 <div
                                     onClick={() => {
                                         onPlayClick();
+                                        handleIncreaseView();
                                         if (track && wavesurfer) {
                                             setCurrentTrack({ ...currentTrack, isPlaying: false })
                                         }

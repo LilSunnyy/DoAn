@@ -5,6 +5,7 @@ import { TrackContextProvider } from '@/lib/track.wrapper';
 import NextAuthWrapper from '@/lib/next.auth.wrapper';
 import NProgressWrapper from '@/lib/nprgress.wrapper';
 import { ToastProvider } from '@/utils/toast';
+import '@/app/styles/globals.scss'
 
 const DRAWER_WIDTH = 240;
 

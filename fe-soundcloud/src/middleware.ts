@@ -8,6 +8,8 @@ export default withAuth({
 
 export const config = {
     matcher:[
-        "/playlists"
+        "/playlists", 
+        "/track/upload",
+        "/like"
     ]
 }

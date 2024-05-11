@@ -164,7 +164,7 @@ const Step2 = (props: IProps) => {
 
     const handleFileUpload = async (formData: FormData) => {
         try {
-            const res = await axios.post('http://localhost:8000/tracks/', formData, {
+            const res = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/tracks/`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${session?.access_token}`,
@@ -209,7 +209,7 @@ const Step2 = (props: IProps) => {
         }
 
         const resPop = await sendRequest<IBackendRes<ITrack>>({
-            url: "http://localhost:8000/tracks/",
+            url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/tracks/`,
             method: "POST",
             headers: {
                 'Authorization': `Bearer ${session?.access_token}`,
@@ -225,6 +225,13 @@ const Step2 = (props: IProps) => {
             toast.error("Tạo Track thất bại")
         } else {
             setValue(0)
+            await sendRequest<IBackendRes<any>>({
+                url: `/api/revalidate`,
+                method: "POST",
+                queryParams: {
+                    tag: "track-by-profile",
+                }
+            })
             toast.success("Tạo Track thành công")
         }
     }

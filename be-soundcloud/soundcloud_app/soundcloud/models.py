@@ -38,6 +38,7 @@ class Playlist(ItemBase):
     class Meta:
         db_table = 'playlist'
 
+    status = models.BooleanField(null=False, default=False)
     title = models.CharField(max_length=255, null=True, unique=False)
     description =  models.TextField(null=True, blank=True)
     fk_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,

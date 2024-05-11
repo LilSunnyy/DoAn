@@ -37,7 +37,7 @@ const CommentTrack = (props: IProps) => {
     const handleSubmit = async () => {
 
         const res = await sendRequest<IBackendRes<IComment>>({
-            url: `http://localhost:8000/comment/`,
+            url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/comment/`,
             method: "POST",
             body: {
                 comment_text: yourComment,

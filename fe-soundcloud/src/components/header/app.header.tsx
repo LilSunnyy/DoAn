@@ -65,6 +65,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 
 export default function AppHeader() {
     const { data: session } = useSession()
+    console.log(session?.user)
 
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
     const router = useRouter();
@@ -208,6 +209,12 @@ export default function AppHeader() {
                             <StyledInputBase
                                 placeholder="Search…"
                                 inputProps={{ 'aria-label': 'search' }}
+                                onKeyDown={(e: any) => {
+                                    if (e.key === "Enter") {
+                                        if (e?.target?.value)
+                                            router.push(`/search?q=${e?.target?.value}`)
+                                    }
+                                }}
                             />
                         </Search>
                         <Box sx={{ flexGrow: 1 }} />
@@ -224,11 +231,11 @@ export default function AppHeader() {
                             {
                                 session ?
                                     <>
-                                        <Link href={"/playlists"}>PlayLists</Link>
+                                        <Link href={`/playlist/?page=1`}>PlayLists</Link>
                                         <Link href={"/likes"}>Likes</Link>
                                         <Link href={"/track/upload"}>Upload</Link>
                                         <img
-                                            src={session?.user?.avatar !== "" && session?.user?.avatar !== null ?
+                                            src={session?.user?.avatar !== "" && session?.user?.avatar !== null && session?.user?.avatar !== undefined ?
                                                 `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/${session?.user?.avatar}` :
                                                 "/avatars-000184820148-9xr49w-t240x240.jpg"}
                                             onClick={handleProfileMenuOpen}

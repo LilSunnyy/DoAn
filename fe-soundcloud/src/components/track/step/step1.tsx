@@ -37,7 +37,7 @@ const Step1 = (props: IProps) => {
                 formData.append("is_active", "true");
 
                 try {
-                    const res = await axios.post('http://localhost:8000/tracks/', formData, {
+                    const res = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/tracks/`, formData, {
                         headers: {
                             'Content-Type': 'multipart/form-data',
                             'Authorization': `Bearer ${session?.access_token}`,

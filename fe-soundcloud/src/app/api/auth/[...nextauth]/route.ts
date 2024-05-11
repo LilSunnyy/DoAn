@@ -1,8 +1,10 @@
 import NextAuth from "next-auth"
 import GithubProvider from "next-auth/providers/github"
+import GoogleProvider from "next-auth/providers/google"
 import { AuthOptions } from "next-auth"
 import { sendRequest } from "@/utils/api"
 import CredentialsProvider from "next-auth/providers/credentials";
+
 
 const BACKEND_ACCESS_TOKEN_LIFETIME = 45 * 60;  
 
@@ -27,7 +29,7 @@ export const authOptions : AuthOptions = {
         bodyObject.append('client_id', process.env.DJANGO_CLIENT_ID || '');
         bodyObject.append('client_secret', process.env.DJANGO_CLIENT_SECRET || '');
         bodyObject.append('grant_type', 'password');
-        const response = await fetch('http://127.0.0.1:8000/o/token/', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/o/token/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -46,12 +48,16 @@ export const authOptions : AuthOptions = {
       clientId: process.env.GITHUB_ID!, 
       clientSecret: process.env.GITHUB_SECRET!,
     }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_ID!, 
+      clientSecret: process.env.GOOGLE_SECRET!,
+    }),
   ],
   callbacks:{
     async jwt({token,user,account,profile,trigger}){
-      if(trigger ==="signIn" && account?.provider !== "credentials"){
+      if(trigger ==="signIn" && account?.provider === "github"){
         const res = await sendRequest<backendResponse>({
-          url: "http://127.0.0.1:8000/github/",
+          url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/github/`,
           method: "POST",
           body: { access_token: account?.access_token }
         })
@@ -67,6 +73,20 @@ export const authOptions : AuthOptions = {
         token.access_token = user.access_token;
           //@ts-ignore
         token.refresh_token = user.refresh_token;
+      }
+      else if(trigger ==="signIn" && account?.provider === "google"){
+        //@ts-ignore
+        const res = await sendRequest<backendResponse>({
+          url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/google/`,
+          method: "POST",
+          body: { access_token: account?.access_token }
+        })
+        console.log(res)
+       if(res){
+        token.user = res.user;
+        token.access_token = res.access;
+        token.refresh_token = res.refresh;
+       }
       }
       return token;
     },

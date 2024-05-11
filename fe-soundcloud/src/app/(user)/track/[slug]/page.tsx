@@ -4,19 +4,25 @@ import { getIdFromUrl, sendRequest } from '@/utils/api';
 import Divider from '@mui/material/Divider';
 import { Box } from "@mui/material";
 import WaveTrack from "@/components/track/wave.track";
-
+import { notFound } from "next/navigation";
 
 const DetailTrackPage = async ({ params }: { params: { slug: string } }) => {
     const id = getIdFromUrl(params.slug)
     const res = await sendRequest<IBackendRes<ITrack>>({
-        url: `http://localhost:8000/tracks/${id}/`,
+        url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/tracks/${id}/`,
         method: "GET",
+        nextOption: { next: { tags: ['track-by-id'] } }
     })
 
     const resComments = await sendRequest<IBackendRes<IComment[]>>({
-        url: `http://localhost:8000/comment/${id}/track-comments/`,
+        url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/comment/${id}/track-comments/`,
         method: "GET",
+        nextOption: { cache: "no-store" }
     })
+
+    if (res.statusCode === 404) {
+        notFound();
+    }
 
     return (
         <Container>

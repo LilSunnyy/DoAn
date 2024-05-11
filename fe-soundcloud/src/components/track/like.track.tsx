@@ -14,49 +14,63 @@ interface IProps {
 const LikeTrack = (props: IProps) => {
     const { track } = props;
     const { data: session } = useSession();
+    const [like, setLike] = useState<ILike | null>(null);
     const router = useRouter();
-
-    const [trackLikes, setTrackLikes] = useState<ITrack[] | null>(null);
 
     const fetchData = async () => {
         if (session?.access_token) {
             const res2 = await sendRequest<IBackendRes<ILike>>({
-                url: `http://localhost:8000/like/`,
-                method: "GET",
-                queryParams: {
-                    current: 1,
-                    pageSize: 100,
-                    sort: "-createdAt"
+                url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/like/liked-track/`,
+                method: "POST",
+                body: {
+                    fk_tracks: track?.id,
                 },
                 headers: {
                     Authorization: `Bearer ${session?.access_token}`,
                 },
             })
-            if (res2?.results)
-                setTrackLikes(res2?.results)
+            if (res2?.results) {
+                setLike(res2?.results)
+            }
         }
     }
+
     useEffect(() => {
         fetchData();
     }, [session])
 
     const handleLikeTrack = async () => {
         await sendRequest<IBackendRes<ITrack>>({
-            url: `http://localhost:8000/api/v1/likes`,
+            url: `${process.env.NEXT_PUBLIC_BACKEND_URL}/like/`,
             method: "POST",
             body: {
-                track: track?.id,
-                quantity: trackLikes?.some(t => t.id === track?.id) ? -1 : 1,
+                fk_tracks: track?.id,
+                like: !like?.like
             },
             headers: {
                 Authorization: `Bearer ${session?.access_token}`,
             },
         })
-
         fetchData();
-        router.refresh();
+        await sendRequest<IBackendRes<any>>({
+            url: `/api/revalidate`,
+            method: "POST",
+            queryParams: {
+                tag: "liked-by-user",
+            }
+        })
 
+        await sendRequest<IBackendRes<any>>({
+            url: `/api/revalidate`,
+            method: "POST",
+            queryParams: {
+                tag: "track-by-id",
+            }
+        })
+
+        router.refresh()
     }
+
     return (
         <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between", width: "100%" }}>
             <Chip
@@ -64,7 +78,7 @@ const LikeTrack = (props: IProps) => {
                 sx={{ borderRadius: "5px" }}
                 size="medium"
                 variant="outlined"
-                color={trackLikes?.some(t => t.id === track?.id) ? "error" : "default"}
+                color={like?.like ? "error" : "default"}
                 clickable
                 icon={<FavoriteIcon />} label="Like"
             />
