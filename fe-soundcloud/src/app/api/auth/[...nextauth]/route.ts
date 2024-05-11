@@ -81,7 +81,6 @@ export const authOptions : AuthOptions = {
           method: "POST",
           body: { access_token: account?.access_token }
         })
-        console.log(res)
        if(res){
         token.user = res.user;
         token.access_token = res.access;
