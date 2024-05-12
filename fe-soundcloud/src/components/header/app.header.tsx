@@ -21,6 +21,8 @@ import Avatar from '@mui/material/Avatar';
 import Link from 'next/link'
 import { redirect, useRouter } from 'next/navigation';
 import { useSession, signIn, signOut } from "next-auth/react"
+import ActiveLink from './active.link';
+import { useEffect } from 'react';
 
 
 const Search = styled('div')(({ theme }) => ({
@@ -65,10 +67,14 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 
 export default function AppHeader() {
     const { data: session } = useSession()
-    console.log(session?.user)
+    const router = useRouter();
+
+    if (session?.error === "RefreshAccessTokenError") {
+        router.push("/auth/signin")
+    }
 
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-    const router = useRouter();
+
     const [mobileMoreAnchorEl, setMobileMoreAnchorEl] =
         React.useState<null | HTMLElement>(null);
 
@@ -115,7 +121,7 @@ export default function AppHeader() {
             onClose={handleMenuClose}
         >
             <MenuItem>
-                <Link href={`/profile/${session?.user?.id}`}
+                <Link href={`/profile/${session?.user?.id ?? session?.user?.pk}`}
                     style={{
                         color: "unset",
                         textDecoration: "unset"
@@ -225,15 +231,18 @@ export default function AppHeader() {
                             cursor: "pointer",
                             "> a": {
                                 color: "unset",
-                                textDecoration: "unset"
+                                textDecoration: "unset",
+                                padding: "5px",
+
+                                "&.active": { color: "orange" }
                             }
                         }}>
                             {
                                 session ?
                                     <>
-                                        <Link href={`/playlist/?page=1`}>PlayLists</Link>
-                                        <Link href={"/likes"}>Likes</Link>
-                                        <Link href={"/track/upload"}>Upload</Link>
+                                        <ActiveLink href={"/playlist"}>PlayLists</ActiveLink>
+                                        <ActiveLink href={"/likes"}>Likes</ActiveLink>
+                                        <ActiveLink href={"/track/upload"}>Upload</ActiveLink>
                                         <img
                                             src={session?.user?.avatar !== "" && session?.user?.avatar !== null && session?.user?.avatar !== undefined ?
                                                 `${process.env.NEXT_PUBLIC_BACKEND_URL}/static/${session?.user?.avatar}` :

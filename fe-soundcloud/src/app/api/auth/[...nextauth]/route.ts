@@ -4,13 +4,44 @@ import GoogleProvider from "next-auth/providers/google"
 import { AuthOptions } from "next-auth"
 import { sendRequest } from "@/utils/api"
 import CredentialsProvider from "next-auth/providers/credentials";
+import { JWT } from "next-auth/jwt"
+import dayjs from "dayjs"
 
 
-const BACKEND_ACCESS_TOKEN_LIFETIME = 45 * 60;  
+async function refreshAccessToken(token: JWT) {
+  const bodyObject = new URLSearchParams();
+  bodyObject.append('client_id', process.env.DJANGO_CLIENT_ID || '');
+  bodyObject.append('client_secret', process.env.DJANGO_CLIENT_SECRET || '');
+  bodyObject.append('grant_type', 'refresh_token');
+  bodyObject.append('refresh_token', token?.refresh_token);
 
-const getCurrentEpochTime = () => {
-  return Math.floor(new Date().getTime() / 1000);
-};
+  const resFetch = await fetch('http://127.0.0.1:8000/o/token/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: bodyObject.toString(),
+  });
+  
+  const res = await resFetch.json();
+  if (!res.error) {
+      return {
+          ...token,
+          access_token: res?.access_token ?? "",
+          refresh_token: res?.refresh_token ?? "",
+          access_expire: dayjs(new Date()).add(
+              +(process.env.TOKEN_EXPIRE_NUMBER as string), (process.env.TOKEN_EXPIRE_UNIT as any)
+          ).unix(),
+          error: ""
+      }
+  } else {
+      return {
+          ...token,
+          error: "RefreshAccessTokenError",
+      }
+  }
+
+}
 
 export const authOptions : AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -65,6 +96,9 @@ export const authOptions : AuthOptions = {
         token.user = res.user;
         token.access_token = res.access;
         token.refresh_token = res.refresh;
+      //   token.access_expire = dayjs(new Date()).add(
+      //     +(process.env.TOKEN_EXPIRE_NUMBER as string), (process.env.TOKEN_EXPIRE_UNIT as any)
+      // ).unix();
        }
       }else if(trigger ==="signIn" && account?.provider === "credentials"){
         //@ts-ignore
@@ -73,6 +107,9 @@ export const authOptions : AuthOptions = {
         token.access_token = user.access_token;
           //@ts-ignore
         token.refresh_token = user.refresh_token;
+        token.access_expire = dayjs(new Date()).add(
+          +(process.env.TOKEN_EXPIRE_NUMBER as string), (process.env.TOKEN_EXPIRE_UNIT as any)
+      ).unix();
       }
       else if(trigger ==="signIn" && account?.provider === "google"){
         //@ts-ignore
@@ -85,15 +122,24 @@ export const authOptions : AuthOptions = {
         token.user = res.user;
         token.access_token = res.access;
         token.refresh_token = res.refresh;
+      //   token.access_expire = dayjs(new Date()).add(
+      //     +(process.env.TOKEN_EXPIRE_NUMBER as string), (process.env.TOKEN_EXPIRE_UNIT as any)
+      // ).unix();
        }
       }
+      const isTimeAfter = dayjs(dayjs(new Date())).isAfter(dayjs.unix((token?.access_expire as number ?? 0)));
+      if (isTimeAfter) {
+          return refreshAccessToken(token)
+      }
+
       return token;
     },
     session({session,token,user}){
       if(token){
         session.access_token = token.access_token;
-        session.refresh_token = token.refresh_token
-        session.user = token.user
+        session.refresh_token = token.refresh_token;
+        session.user = token.user;
+        session.error = token.error;
       }
       return session;
     }

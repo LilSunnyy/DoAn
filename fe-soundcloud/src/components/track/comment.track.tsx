@@ -43,7 +43,7 @@ const CommentTrack = (props: IProps) => {
                 comment_text: yourComment,
                 moment: Math.round(wavesurfer?.getCurrentTime() ?? 0),
                 fk_tracks: track?.id,
-                fk_user: session?.user.id
+                fk_user: session?.user.id ?? session?.user.pk
             },
 
             headers: {
@@ -82,13 +82,16 @@ const CommentTrack = (props: IProps) => {
                     />
                 }
             </div>
+            {/* {`${process.env.NEXT_PUBLIC_BACKEND_URL}${track?.fk_user.avatar}`} */}
             <div style={{ display: "flex", gap: "10px" }}>
                 <div className='left' style={{ width: "190px", display: "flex", flexDirection: "column", alignItems: "center" }}>
                     <img
                         style={{
                             height: 150, width: 150, borderRadius: "50%"
                         }}
-                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${track?.fk_user.avatar}`}
+                        src={track?.fk_user.avatar !== "" && track?.fk_user.avatar !== null && track?.fk_user.avatar !== undefined ?
+                            `${process.env.NEXT_PUBLIC_BACKEND_URL}${track?.fk_user.avatar}` :
+                            "/avatars-000184820148-9xr49w-t240x240.jpg"}
                     />
                     <h3>{track?.fk_user.username}</h3>
                 </div>
@@ -102,7 +105,9 @@ const CommentTrack = (props: IProps) => {
                                             height: 40, width: 40, borderRadius: "50%"
 
                                         }}
-                                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${comment.fk_user.avatar}`}
+                                        src={comment?.fk_user.avatar !== "" && comment?.fk_user.avatar !== null && comment?.fk_user.avatar !== undefined ?
+                                            `${process.env.NEXT_PUBLIC_BACKEND_URL}${comment?.fk_user.avatar}` :
+                                            "/avatars-000184820148-9xr49w-t240x240.jpg"}
                                     />
                                     <div>
                                         <div style={{ fontSize: "13px" }}>{comment?.fk_user.username ?? comment?.fk_user.email} at

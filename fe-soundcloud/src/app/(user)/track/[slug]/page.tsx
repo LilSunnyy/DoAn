@@ -5,6 +5,12 @@ import Divider from '@mui/material/Divider';
 import { Box } from "@mui/material";
 import WaveTrack from "@/components/track/wave.track";
 import { notFound } from "next/navigation";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: 'Nghe nhạc với Sound cloud',
+    description: 'Mô tả',
+}
 
 const DetailTrackPage = async ({ params }: { params: { slug: string } }) => {
     const id = getIdFromUrl(params.slug)
