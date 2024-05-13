@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.account',
     'allauth.socialaccount.providers.github',
+    'allauth.socialaccount.providers.google',
     'dj_rest_auth',
     'dj_rest_auth.registration',
 ]
@@ -149,10 +150,24 @@ SOCIALACCOUNT_PROVIDERS = {
         },
         "VERIFIED_EMAIL": True,
     },
+    "google": {
+            "APP": {
+                "client_id":"",
+                "secret":"",
+                "key": "",
+            },
+            "SCOPE": [
+                "profile",
+                "email",
+            ],
+            "AUTH_PARAMS": {
+                "access_type": "online",
+            },
+            "VERIFIED_EMAIL": True,
+        },
 }
 
 WSGI_APPLICATION = 'soundcloud_app.wsgi.application'
-
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
